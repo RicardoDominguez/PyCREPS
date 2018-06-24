@@ -1,4 +1,5 @@
 # Implements the low level policy: (return an action given the system state)
+import numpy as np
 
 class TilePol:
     '''
@@ -35,7 +36,7 @@ class TilePol:
         # For values whitin range...
         aoX = ~(ilX | imX)
         indxs = ceil(X(aoX) / float(self.deltaX)) # Indexes of W used
-        u(aoX) = np.diag(W[indxs, aoX]) # Pairs of is and aoX (TODO: prolly wrong)
+        u[aoX] = np.diag(W[indxs, aoX]) # Pairs of is and aoX (TODO: prolly wrong)
 
         # Check for saturation
         u[u > self.max] = self.max
