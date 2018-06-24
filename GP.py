@@ -25,7 +25,7 @@ class GPS( BaseEstimator ):
 
         for i in xrange(self.nout):
             try:
-                self.gps[i].fit(X, Y[:, i])
+                self.gps[i].fit(Xt, Yd[:, i])
             except ValueError as e:
                 print( 'ValueError cought for i:{0}: e:{1}'.format( i, e ) )
                 raise e

@@ -9,7 +9,7 @@ class TilePol:
     def __init__(self, nX, deltaX, min, max):
         '''
         Inputs:
-            nX         number of tiles
+            nX         number of tiles = nW
             deltaX     spacing between each tile (tiles are even spaced)
             min        minimum control action
             max        maximum control action
@@ -30,14 +30,15 @@ class TilePol:
 
         # Check values out of tile range
         ilX, imX = X <= 0, X >= self.nX * self.deltaX
-        u[ilX] = W[0, ilX]
-        u[imX] = W[-1, imX]
+        u[ilX] = W[0, ilX.reshape(-1)]
+        u[imX] = W[-1, imX.reshape(-1)]
 
         # For values whitin range...
-        aoX = ~(ilX | imX)
-        indxs = ceil(X(aoX) / float(self.deltaX)) # Indexes of W used
-        u[aoX] = np.diag(W[indxs, aoX]) # Pairs of is and aoX (TODO: prolly wrong)
+        aoX = ~(ilX | imX).reshape(-1)
+        indxs = int(np.ceil(X[aoX] / float(self.deltaX)))-1 # Indexes of W used
+        u[aoX] = np.diag(W[indxs, aoX]) # Pairs of is and aoX
 
         # Check for saturation
         u[u > self.max] = self.max
         u[u < self.min] = self.min
+        return u
