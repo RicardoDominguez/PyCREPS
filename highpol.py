@@ -1,5 +1,6 @@
 import numpy as np
-import numpy.random.multivariate_normal as mvnrnd
+from numpy.random import multivariate_normal as mvnrnd
+from dual_fnc import DualFnc
 
 # Defines the high level policy as a multivariate normal distribution
 class HighPol:
@@ -11,6 +12,7 @@ class HighPol:
         '''
         self.mu = mu            # (W x 1)
         self.sigma = sigma      # (W x W)
+        self.dualFnc = DualFnc()
 
     def sample(self, N = 1):
         '''
@@ -23,15 +25,19 @@ class HighPol:
         '''
         return mvnrnd(self.mu, self.sigma, (N, 1))
 
-    def update(self, p, w):
+    def update(self, w, R, F, eps):
         '''
         Update high level policy mean and covariance matrix using weighted
         maximum likelihood
 
         Inputs:
-            p   weights for weighted ML                     (N x 1)
-            w   low level policy parameters from samples    (N x W)
+            w       Weight  dataset matrix  (N x W)
+            R       Return  dataset vector  (N x 1)
+            F       Feature dataset matrix  (N x S)
+            eps     Epsilon                 (1 x 1)
         '''
+        p = self.dualFnc.computeSampleWeighting(w, R, F, eps)
+
         N = p.size()
         S = np.asmatrix(np.ones((N, 1)))         # Context matrix            (N x 1)
         B = np.asmatrix(w);                      # Parameter matrix          (N x W)
