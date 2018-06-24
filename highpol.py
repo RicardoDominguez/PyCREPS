@@ -7,11 +7,11 @@ class HighPol:
     def __init__(self, mu, sigma):
         '''
         Inputs:
-            mu      parameter mean
-            sigma   parameter covariance matrix
+            mu      parameter mean                      (W, )
+            sigma   parameter covariance matrix         (W x w)
         '''
-        self.mu = mu            # (W x 1)
-        self.sigma = sigma      # (W x W)
+        self.mu = mu
+        self.sigma = sigma
         self.dualFnc = DualFnc()
 
     def sample(self, N = 1):
@@ -21,9 +21,9 @@ class HighPol:
         Inputs:
             N   number of samples
 
-        Outputs: vector of sampled control actions
+        Outputs: vector of sampled control actions      (W x N)
         '''
-        return mvnrnd(self.mu, self.sigma, (N, 1))
+        return (mvnrnd(self.mu, self.sigma, N).T)
 
     def update(self, w, R, F, eps):
         '''
@@ -36,9 +36,10 @@ class HighPol:
             F       Feature dataset matrix  (N x S)
             eps     Epsilon                 (1 x 1)
         '''
-        p = self.dualFnc.computeSampleWeighting(w, R, F, eps)
+        #p = self.dualFnc.computeSampleWeighting(w, R, F, eps) # (N x 1)
+        p = np.ones(w.shape[0])
 
-        N = p.size()
+        N = p.size
         S = np.asmatrix(np.ones((N, 1)))         # Context matrix            (N x 1)
         B = np.asmatrix(w);                      # Parameter matrix          (N x W)
         P = np.asmatrix(np.diag(p.reshape(-1)))  # Diagonal weighted matrix  (N x N)
@@ -55,8 +56,8 @@ class HighPol:
         for i in xrange(0, N):
             mu_diff = w_mu_diff[:, i].reshape(-1, 1)
             nom = ps[i] * mu_diff * mu_diff.T
-            sum_sigma += norm
+            sum_sigma += nom
 
         # Update mean and sigma
-        self.mu = mu
+        self.mu = mu.reshape(-1)
         self.sigma = sum_sigma
