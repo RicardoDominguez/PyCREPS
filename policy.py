@@ -25,20 +25,34 @@ class TilePol:
             W   policy weights                  (nW x T)
             X   vector of states                (T  x 1)
         '''
-        T = X.shape[0]
-        u = np.zeros((T, 1))
+        if isinstance(X, (list, tuple, np.ndarray)):
+            T = X.shape[0]
+            u = np.zeros((T))
 
-        # Check values out of tile range
-        ilX, imX = X <= 0, X >= self.nX * self.deltaX
-        u[ilX] = W[0, ilX.reshape(-1)]
-        u[imX] = W[-1, imX.reshape(-1)]
+            # Check values out of tile range
+            ilX, imX = X <= 0, X >= self.nX * self.deltaX
+            u[ilX.reshape(-1)] = W[0, ilX.reshape(-1)]
+            u[imX.reshape(-1)] = W[-1, imX.reshape(-1)]
 
-        # For values whitin range...
-        aoX = ~(ilX | imX).reshape(-1)
-        indxs = int(np.ceil(X[aoX] / float(self.deltaX)))-1 # Indexes of W used
-        u[aoX] = np.diag(W[indxs, aoX]) # Pairs of is and aoX
+            # For values whitin range...
+            aoX = ~(ilX | imX).reshape(-1)
+            if any(aoX):
+                indxs = (np.ceil(X[aoX] / float(self.deltaX))).astype(int)-1 # Indexes of W used
+                u[aoX] = np.diag(W[indxs, aoX]) # Pairs of is and aoX
 
-        # Check for saturation
-        u[u > self.max] = self.max
-        u[u < self.min] = self.min
+            # Check for saturation
+            u[u > self.max] = self.max
+            u[u < self.min] = self.min
+        else:
+            if X >= self.nX * self.deltaX:
+                u = W[-1]
+            elif X <= 0:
+                u = W[0]
+            else:
+                indx = int(np.ceil(X / float(self.deltaX)))-1 # Indexes of W used
+                u = W[indx]
+            if u > self.max:
+                u = self.max
+            elif u < self.min:
+                u = self.min
         return u

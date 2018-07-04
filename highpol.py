@@ -36,8 +36,7 @@ class HighPol:
             F       Feature dataset matrix  (N x S)
             eps     Epsilon                 (1 x 1)
         '''
-        #p = self.dualFnc.computeSampleWeighting(w, R, F, eps) # (N x 1)
-        p = np.ones(w.shape[0])
+        p = self.dualFnc.computeSampleWeighting(w, R, F, eps) # (N x 1)
 
         N = p.size
         S = np.asmatrix(np.ones((N, 1)))         # Context matrix            (N x 1)
@@ -55,9 +54,11 @@ class HighPol:
         ps = p / sum(p)
         for i in xrange(0, N):
             mu_diff = w_mu_diff[:, i].reshape(-1, 1)
-            nom = ps[i] * mu_diff * mu_diff.T
+            nom = float(ps[i]) * mu_diff * mu_diff.T
             sum_sigma += nom
 
         # Update mean and sigma
-        self.mu = mu.reshape(-1)
+        self.mu = np.squeeze(np.asarray(mu))
         self.sigma = sum_sigma
+        print 'Mean updated', self.mu
+        print 'Sigma updated', np.mean(self.sigma)

@@ -19,7 +19,10 @@ class CostFcn:
         Outputs
             C   cost each rollout   (N x 1)
         '''
-        err = np.sum(np.abs(y[:, self.iCost] - self.target), 1)
+        if y.ndim == 1:
+            err = np.sum(np.abs(y - self.target), 0)
+        elif y.ndim == 2:
+            err = np.sum(np.abs(y - self.target), 1)
         C = np.exp(-err / self.K)
         #if self.maxV != None:
         #    C[y[:][iCost] < self.maxV * 0.95] = 1

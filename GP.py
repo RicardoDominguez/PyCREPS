@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn import gaussian_process
 from sklearn.base import BaseEstimator
+import pdb
 
 MACHINE_EPSILON = np.finfo(np.double).eps
 
@@ -15,17 +16,18 @@ class GPS( BaseEstimator ):
         self.dyno = dyno
         self.difi = difi
         self.nout = len(dyno)
-        self.gps = [ gaussian_process.GaussianProcess( regr=regr, corr=corr,
-                 storage_mode=storage_mode, verbose=verbose, theta0=theta0 ) for i in range( self.nout ) ]
+        #self.gps = [ gaussian_process.GaussianProcessRegressor( regr=regr, corr=corr,
+        #         storage_mode=storage_mode, verbose=verbose, theta0=theta0 ) for i in range( self.nout ) ]
+        self.gps = [gaussian_process.GaussianProcessRegressor() for i in range(self.nout)]
 
     def fit(self, X, Y):
+        Yd = np.copy(Y)
         Xt = X[:, self.dyni] # Inputs of the model
-        Y[:, self.difi] -= X[:, self.difi] # Differences
-        Yd = Y[:, self.dyno] # Outputs of the model
-
+        Yd[:, self.difi] = Y[:, self.difi] - X[:, self.difi] # Differences
+        Yt = Yd[:, self.dyno] # Outputs of the model
         for i in xrange(self.nout):
             try:
-                self.gps[i].fit(Xt, Yd[:, i])
+                self.gps[i].fit(Xt, Yt[:, i])
             except ValueError as e:
                 print( 'ValueError cought for i:{0}: e:{1}'.format( i, e ) )
                 raise e
