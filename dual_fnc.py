@@ -111,9 +111,10 @@ class DualFnc:
         if res.success:
             return res.x
         else:
-            print res.x
-            print res.status
+            print 'Maximum err', np.max(R)
             print res.message
+            plt.plot(R)
+            plt.show()
             raise Exception('Minimizer did not converge')
 
 
