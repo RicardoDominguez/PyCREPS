@@ -36,7 +36,7 @@ pol = TilePol(nX, deltaX, minU, maxU)
 
 # High level policy
 W_mean = 2
-W_dev = W_mean / 1.0
+W_dev = W_mean / 5.0
 hpol_mu = np.random.normal(W_mean, W_dev, nX);
 print '-------------------------------------------'
 print 'Initial policy weights', hpol_mu
