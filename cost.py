@@ -1,29 +1,31 @@
 import numpy as np
 
-class CostFcn:
-    def __init__(self, K, iCost, target = 0):
-        self.K = K
-        self.iCost = iCost
-        self.target = target
-        #self.maxV = maxV
-        #self.outboundR = outboundR
+class CostExpQuad:
+    '''
+    Compute the exponentiated negative quadratic cost:
 
-    def sample(self, y):
+        exp(-(x-z)^2 * w / 2)
+
+    Where:
+        x   state
+        z   target state
+        w   weight vector
+    '''
+    def __init__(self, w, z):
         '''
-        Returns the cost of N rollouts.
-        Cost = (target - measurements), scaled by a factor k.
-
         Inputs
-            y   states sensed       (N x H)
+            w   weight vector   (1 x S)
+            z   target state    (1 x S)
+        '''
+        self.w = w / 2.0
+        self.z = z
+
+    def sample(self, x):
+        '''
+        Inputs
+            x   states       (N x S)
 
         Outputs
-            C   cost each rollout   (N x 1)
+            C   cost         (N x 1)
         '''
-        if y.ndim == 1:
-            err = np.sum(np.abs(y - self.target), 0)
-        elif y.ndim == 2:
-            err = np.sum(np.abs(y - self.target), 1)
-        C = np.exp(-err / self.K)
-        #if self.maxV != None:
-        #    C[y[:][iCost] < self.maxV * 0.95] = 1
-        return C.reshape(-1, 1)
+        return np.exp(-np.sum(np.power(x - z, 2) * self.w, 1)).reshape(-1, 1)
