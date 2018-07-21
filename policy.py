@@ -1,5 +1,6 @@
 # Implements the low level policy: (return an action given the system state)
 import numpy as np
+import pdb
 
 class TilePol:
     '''
@@ -64,6 +65,29 @@ class TilePol:
             elif u < self.min:
                 u = self.min
 
+        return u
+
+class Proportional:
+    def __init__(self, min, max, target, offset):
+        self.min = min
+        self.max = max
+        self.target = target # (2, )
+        self.offset = offset
+
+    def sample(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (4 x 1)
+            X   vector of states                (2, )
+        '''
+        e = (self.target - X).reshape(-1, 1) # error
+        K = np.copy(W.reshape(2, 2))
+        if abs(e[0]) > 2 * self.target[0]:
+            K[0, 0] = 0
+            K[1, 0] = 0
+        u = np.matmul(K, e).reshape(-1) + self.offset
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
         return u
 
 # if __name__ == "__main__":

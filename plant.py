@@ -1,20 +1,19 @@
 import numpy as np
+from simulator import Scenario
 
 class Plant:
-    def rollout(self, hpol, pol):
-        x = 0
-        H = 10
-        w = hpol.mu
-        latent = []
-        for t in xrange(H):
+    def rollout(self, x0, H, hpol, pol, cost):
+        w = hpol.mu.reshape(-1, 1)
+        R = 0
+
+        scn = Scenario(0.1)
+        scn.initScenario(x0)
+        x = x0
+        for t in xrange(H): # For each step within horizon
             u = pol.sample(w, x)
-            if isinstance(u, np.ndarray):
-                u = u[0]
-            latent.append([x, u])
-            y = x + u
+            y = scn.step(u)
+            R += cost.sample(y)
             x = y
-        latent.append([y, u])
-        latent = np.array(latent)
-        X = latent[0:-1, :]
-        Y = latent[1:, :]
-        return X, Y
+            #scn.plot()
+
+        return R[0, 0]
