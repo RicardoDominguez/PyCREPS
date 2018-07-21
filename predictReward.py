@@ -1,34 +1,32 @@
 import numpy as np
 import pdb
 import matplotlib.pyplot as plt
+from simulator import Scenario
 
-def predictReward(x0, M, H, hipol, pol, gp, cost):
+def predictReward(x0, M, H, hipol, pol, cost):
     '''
     Compute expected rewards by sampling trayectories using the forward models.
     '''
-    ns = x0.size
+    W = hipol.sample(M).T # (M x W)
+    R = np.zeros(M).reshape(-1, 1)
+    F = np.zeros((M, len(x0)))
 
-    # Sample low level policy weight from high level policy
-    w = hipol.sample(M) # (W x M)
+    scn = Scenario(0.1)
+    for e in range(M): # For each episode
+        if np.remainder(e, 10) == 0: print('Simulation ' + str(e+1) + '...')
+        w = W[e, :]
+        scn.initScenario(x0)
+        x = x0
+        for t in xrange(H): # For each step within horizon
+            u = pol.sample(w, x)
+            y = scn.step(u)
+            #print u
+            #pdb.set_trace()
+            R[e] += cost.sample(y).reshape(-1,)
+            x = y
+            #scn.plot()
 
-    # Initialize matrices
-    x = np.dot(np.ones((M, 1)), x0) # Initial states
-    y = np.zeros((M, ns, H))
-
-    # For each step within horizon
-    for t in xrange(H):
-        # This needs to be fixed so that dyni and dyno are properly used
-        u = pol.sample(w, x)
-        xu = np.array([x.reshape(-1), u]).T # (N x nS + 1)
-        gpout = gp.predict(xu)
-        if np.min(gpout) < -1:
-            pdb.set_trace()
-        y[:, :, t] = gpout
-        x = gpout
-
-    R = cost.sample(y[:, 0, :]) # Episode reward
-    W = w.T
-    F = np.zeros((M, ns))
     #plt.plot(R)
     #plt.show()
+    #pdb.set_trace()
     return R, W, F

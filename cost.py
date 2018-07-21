@@ -28,4 +28,16 @@ class CostExpQuad:
         Outputs
             C   cost         (N x 1)
         '''
-        return np.exp(-np.sum(np.power(x - z, 2) * self.w, 1)).reshape(-1, 1)
+        return np.exp(-np.sum(np.power(x - self.z, 2) * self.w, 1)).reshape(-1, 1)
+
+if __name__ == '__main__':
+    w = np.array([0.005, 100]).reshape(1, -1)
+    t = np.array([20, 0]).reshape(1, -1)
+    cost = CostExpQuad(w, t)
+    print 'max ang ', cost.sample([0, np.pi/2])
+    print 'max tof ', cost.sample([255, 0])
+    print 'both max ', cost.sample([255, 1.57])
+    print 'reg tof', cost.sample([30, np.pi/4])
+    print 'reg ang', cost.sample([60, np.pi/16])
+    print 'ttt ang', cost.sample([60, 0])
+    print 'ttt tof', cost.sample([30, np.pi/16])

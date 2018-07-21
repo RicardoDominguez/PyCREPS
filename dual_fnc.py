@@ -79,7 +79,7 @@ class DualFnc:
 
         args = (W, R, F, eps)
         res = opt.minimize(fnc, x0, args, 'L-BFGS-B', fnc_der, bounds = bds, options={'disp': False})
-        
+
         if res.success:
             return res.x
         else:
@@ -96,9 +96,13 @@ class DualFnc:
         eta = x[0]
         theta = x[1:]
         err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
-        print 'Maximum err', np.max(err)
-        print 'Eta', eta
-        p = np.exp(err / eta)
+
+        try:
+            p = np.exp(err / eta)
+        except RuntimeWarning:
+            print 'Maximum reward is ', np.max(err)
+            print 'Computed eta is ', eta
+            raise Exception('Overflow error, rewards too large...')
 
         #plt.plot(p)
         #plt.show()
