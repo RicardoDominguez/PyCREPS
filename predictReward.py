@@ -1,9 +1,8 @@
 import numpy as np
 import pdb
 import matplotlib.pyplot as plt
-from simulator import Scenario
 
-def predictReward(x0, M, H, hipol, pol, cost):
+def predictReward(scn, x0, M, H, hipol, pol, cost):
     '''
     Compute expected rewards by sampling trayectories using the forward models.
     '''
@@ -11,7 +10,6 @@ def predictReward(x0, M, H, hipol, pol, cost):
     R = np.zeros(M).reshape(-1, 1)
     F = np.zeros((M, len(x0)))
 
-    scn = Scenario(0.1)
     for e in range(M): # For each episode
         if np.remainder(e, 10) == 0: print('Simulation ' + str(e+1) + '...')
         w = W[e, :]
