@@ -81,16 +81,25 @@ class Proportional:
             X   vector of states                (2, )
         '''
         e = (self.target - X).reshape(-1, 1) # error
+        if(e[0] >= 0):
+            e[0] = np.log(e[0] + 1)
+        else:
+            e[0] = np.log(1.0 / (-e[0] + 1))
         K = np.copy(W.reshape(2, 2))
-        if abs(e[0]) > 2 * self.target[0]:
-            K[0, 0] = 0
-            K[1, 0] = 0
+        # if abs(e[0]) > 2 * self.target[0]:
+        #     K[0, 0] = 0
+        #     K[1, 0] = 0
         u = np.matmul(K, e).reshape(-1) + self.offset
         u[u > self.max] = self.max
         u[u < self.min] = self.min
         return u
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 #     pol = TilePol(5, 1, -2, 10, -2)
 #     ws = np.array([[1,1,1],[2,2,2],[3,3,3],[4,4,4],[5,5,5]])
 #     print pol.sample(ws , np.array([-3, -1, 2]).reshape(-1,1))
+    tgt = np.array([10, 0]).reshape(-1)
+    off = np.array([150, 150]).reshape(-1)
+    pol = Proportional(-326, 326, tgt, off)
+    w0 = np.array([10, 0, 10, 0]).reshape(-1)
+    print pol.sample(w0, np.array([0, 0]))

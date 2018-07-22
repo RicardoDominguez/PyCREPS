@@ -97,12 +97,13 @@ class DualFnc:
         theta = x[1:]
         err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
 
-        try:
-            p = np.exp(err / eta)
-        except RuntimeWarning:
-            print 'Maximum reward is ', np.max(err)
-            print 'Computed eta is ', eta
-            raise Exception('Overflow error, rewards too large...')
+        with np.errstate(over = 'raise'):
+            try:
+                p = np.exp(err / eta)
+            except:
+                print 'Maximum reward is ', np.max(err)
+                print 'Computed eta is ', eta
+                raise Exception('Overflow error, rewards too large...')
 
         #plt.plot(p)
         #plt.show()
