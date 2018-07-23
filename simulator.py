@@ -226,24 +226,6 @@ class Scenario:
         y4 = y3 + m2 * np.sin(ang0 + delta_theta)
 
         if(y2 != y4 and x2 != x4): # Prevent division by 0
-            # Calculate perpendicular to wall through current sensor position
-            # m = (y2 - y4) / (x2 - x4)
-            # x_perp = (y4 + x3 * np.tan(delta_theta) - y3 - x4*m) / (np.tan(delta_theta) - m)
-            # y_perp = m * (x_perp - x4) + y4
-            #
-            # # Calculate distances between calculated points
-            # a_2 = (x4 - x3)*(x4 - x3) + (y4 - y3)*(y4 - y3)
-            # b_2 = (x4 - x_perp)*(x4 - x_perp) + (y4 - y_perp)*(y4 - y_perp)
-            # c_2 = (x_perp - x3)*(x_perp - x3) + (y_perp - y3)*(y_perp - y3)
-            #
-            # d_wall = np.sqrt(c_2)
-            # if(a_2 > 1e-9 and b_2 > 1e-9):
-            #     theta_wall = np.arccos((a_2 + b_2 - c_2) / (2 * np.sqrt(a_2) * np.sqrt(b_2))) + self.robot.sensor_theta - np.pi / 2
-            # else:
-            #     theta_wall = 0 # No calculation available, best ignore
-            #
-            # if theta_wall < 0:
-            #     pdb.set_trace()
             a1 = (y2 - y4) / float(x2 - x4)
             a2 = np.tan(self.robot.theta - np.pi/2)
             xi = (y3 - y4 + a1*x4 - x3*a2)/float(a1 - a2)
@@ -295,7 +277,7 @@ class Scenario:
 
 def simulateStep(scn, x0, T, pol, w):
     scn.initScenario(x0)
-    scn.plot(False)
+    scn.plot(True)
     x = x0
     for t in range(T):
         u = pol.sample(w, x)
@@ -303,11 +285,11 @@ def simulateStep(scn, x0, T, pol, w):
         print 'Computed angle ', x[1] * 180 / np.pi
         print 'Wheel speed ', u
         x = scn.step(u)
-        scn.plot(False)
+        scn.plot(True)
         # print 'Real angle ', (scn.wall.theta - scn.robot.theta) * 180 / np.pi
     plt.show()
 
-def simulateResults(scn, x0, T, pol, w, id = 0):
+def performanceMetric(scn, x0, T, pol, w, plot = False):
     dist_errors = []
     ang_errors = []
     max_overshoot = 0
@@ -316,13 +298,11 @@ def simulateResults(scn, x0, T, pol, w, id = 0):
 
     scn.initScenario(x0)
     x = x0
-    plt.figure((id-1) * 2 + 1)
-    scn.plot(False)
+    if plot: scn.plot(False)
     for t in range(T):
         u = pol.sample(w, x)
         x = scn.step(u)
-
-        scn.plot(False)
+        if plot: scn.plot(False)
         if x[0] <= pol.target[0]:
             if time_to_distance == -1:
                 time_to_distance = t+1
@@ -333,7 +313,49 @@ def simulateResults(scn, x0, T, pol, w, id = 0):
         if time_to_distance != -1:
             ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
             dist_errors.append(pol.target[0] - x[0])
-            
+
+    return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
+
+def validatePolicy(scn, x0s, T, pol, w):
+    '''
+    x0s is the set of initial states to test, with (N, 2), where N is the numer of tests
+    '''
+    assert x0s.shape[1] == 2 and x0s.shape[0] > 0, "Invalid shape, should be (N, 2)"
+    N = x0s.shape[0]
+    a_collision = []
+    a_time_to_distance = []
+    a_max_overshoot = []
+    n_collisions = 0;
+    n_converge = 0;
+    for i in xrange(N):
+        x0 = x0s[i, :]
+        collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(scn, x0, T, pol, w, plot = False)
+        a_collision.append(collision)
+        print '-----------------------------------------------------------------'
+        print 'Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi)
+        if collision:
+            print 'COLLISION OCURRED'
+            n_collisions += 1
+        else:
+            print 'No collision ocurred'
+            if time_to_distance != -1:
+                n_converge += 1
+                a_time_to_distance.append(time_to_distance)
+                a_max_overshoot.append(max_overshoot)
+                print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
+                print 'Time to target distance (s): ', time_to_distance * scn.dt
+            else:
+                print 'DID NOT ACHIEVE THE TARGET DISTANCE'
+
+    print '\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2)
+    print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
+    print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance), 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
+    print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
+
+
+def simulateResults(scn, x0, T, pol, w, id = 0):
+    collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(scn, x0, T, pol, w, plot = True)
+
     if id:
         plt.title('Weights ' + str(id) + ' trajectory')
     else:
@@ -385,10 +407,13 @@ if __name__ == '__main__':
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
-    w = np.array([-5.5, 133, -5.4, -105]).reshape(-1)
+    w = np.array([-19.22, 146.5, -19.2, -97.1]).reshape(-1)
     w2 = np.array([-2, 100, 2, -100]).reshape(-1)
-    T = 300
+    T = 1000
 
     #simulateStep(scn, x0, T, pol, w)
     #simulateResults(scn, x0, T, pol, w)
-    compareWeights(scn, x0, T, pol, w, w2)
+    #compareWeights(scn, x0, T, pol, w, w2)
+    x0s = np.array([[200, np.pi/4.5], [200, np.pi/3.5], [200, np.pi/4], [200, np.pi/4.1], [200, np.pi/3.9]])
+    #validatePolicy(scn, x0s, T, pol, w)
+    #simulateStep(scn, np.array([200, np.pi/4.5]), T, pol, w.reshape(-1))
