@@ -1,4 +1,3 @@
-Tune for keeping distance
 Experiment eta
 Experiment more responsive cost function
 Experiment hpol sigma
