@@ -23,7 +23,7 @@ nstates = 2
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
 K = 10             # Number of policy iterations
-M = 100           # Number of simulated rollouts
+M = 1000           # Number of simulated rollouts
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
