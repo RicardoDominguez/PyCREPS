@@ -407,13 +407,13 @@ if __name__ == '__main__':
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
-    w = np.array([-19.22, 146.5, -19.2, -97.1]).reshape(-1)
+    w = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
     w2 = np.array([-2, 100, 2, -100]).reshape(-1)
     T = 1000
 
     #simulateStep(scn, x0, T, pol, w)
     #simulateResults(scn, x0, T, pol, w)
     #compareWeights(scn, x0, T, pol, w, w2)
-    x0s = np.array([[200, np.pi/4.5], [200, np.pi/3.5], [200, np.pi/4], [200, np.pi/4.1], [200, np.pi/3.9]])
-    #validatePolicy(scn, x0s, T, pol, w)
+    x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
+    validatePolicy(scn, x0s, T, pol, w)
     #simulateStep(scn, np.array([200, np.pi/4.5]), T, pol, w.reshape(-1))
