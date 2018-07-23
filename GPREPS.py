@@ -14,10 +14,10 @@ from simulator import Scenario
 
 # Indexes for the state variables being fed to GP, policy, cost function
 dyni = [1]      # GP inputs
-dyno = [0]     # GP outputs
-difi = [0]   # Variables trained by differences
-ipol = [0]         # Policy inputs
-icos = [0]         # Cost function inputs
+dyno = [0]      # GP outputs
+difi = [0]      # Variables trained by differences
+ipol = [0]      # Policy inputs
+icos = [0]      # Cost function inputs
 nstates = 2
 
 # Algorithm parameters
@@ -27,7 +27,7 @@ M = 100           # Number of simulated rollouts
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
-x0 = np.array([130, np.pi/3]) # Initial state
+x0 = np.array([180, np.pi/4]) # Initial state
 H = 300 # Simulation horizon
 
 # Low level policy

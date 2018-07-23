@@ -324,15 +324,16 @@ def simulateResults(scn, x0, T, pol, w, id = 0):
 
         scn.plot(False)
         if x[0] <= pol.target[0]:
-            dist_errors.append(pol.target[0] - x[0])
-            ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
             if time_to_distance == -1:
                 time_to_distance = t+1
             if pol.target[0] - x[0] > max_overshoot:
                 max_overshoot = pol.target[0] - x[0]
             if x[0] < 0.1:
                 collision = True
-
+        if time_to_distance != -1:
+            ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
+            dist_errors.append(pol.target[0] - x[0])
+            
     if id:
         plt.title('Weights ' + str(id) + ' trajectory')
     else:
