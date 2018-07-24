@@ -170,7 +170,6 @@ class Scenario:
             valid - whether the robot would have returned a valid measurement
             m     - distance measured by sensor (255 for invalid)
         '''
-        self.robot.y = self.robot.y
         x_i = -(self.robot.y - self.wall.y - self.robot.x*np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) + self.wall.x*np.tan(self.wall.theta))/(np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) - np.tan(self.wall.theta))
         y_i = np.tan(self.robot.sensor_theta + self.robot.theta - np.pi / 2) * (x_i - self.robot.x) + self.robot.y
 
