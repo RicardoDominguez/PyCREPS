@@ -94,6 +94,32 @@ class Proportional:
         u[u < self.min] = self.min
         return u
 
+    def sampleMat(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (4 x N)
+            X   vector of states                (N x 2)
+
+        Outputs (N x 2)
+        '''
+        e = self.target - X # (10, 2)
+
+        oz = e[:, 0] >= 0
+        e[oz, 0] = np.log(e[oz, 0] + 1)
+        oz = np.invert(oz)
+        e[oz, 0] = np.log(-1.0 / (e[oz, 0] - 1))
+
+        e = e.T.reshape(2, 1, -1)
+
+        K = np.copy(W.reshape(2, 2, -1))
+
+        # K (2 x 2 x N)
+        # e (2 x 1 x N)
+        u = np.einsum('ijn,jkn->ikn', K, e)[:, 0, :].T + self.offset # (N x 2)
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+        return u
+
 if __name__ == "__main__":
 #     pol = TilePol(5, 1, -2, 10, -2)
 #     ws = np.array([[1,1,1],[2,2,2],[3,3,3],[4,4,4],[5,5,5]])
