@@ -32,7 +32,7 @@ class CostExpQuad:
         if x[0] > 0.1:
             return np.exp(-np.sum(np.abs(x - self.z) * self.w, 1)).reshape(-1, 1)
         else:
-            return np.array([[-2]])
+            return np.array([[0]])
 
     def sampleMat(self, x):
         '''
@@ -60,11 +60,14 @@ if __name__ == '__main__':
     # print 'reg ang', cost.sample([60, np.pi/16])
     # print 'ttt ang', cost.sample([60, 0])
     # print 'ttt tof', cost.sample([30, np.pi/16])
-    w = np.array([0.5, 0]).reshape(1, -1)
+    w = np.array([0.5, 1]).reshape(1, -1)
     t = np.array([10, 0]).reshape(1, -1)
     cost = CostExpQuad(w, t)
-    x = np.array([[10, 0], [20, 0], [-1, 0]])
+    x = np.array([[10, 0], [20, 0], [1, 1]])
     print cost.sampleMat(x)
+    print cost.sample(x[0, :])
+    print cost.sample(x[1, :])
+    print cost.sample(x[2, :])
     # print 'zero ', cost.sample([10, 20])
     # print 'at wall', cost.sample([0, 0])
     # print 'init ', cost.sample([30, 0])

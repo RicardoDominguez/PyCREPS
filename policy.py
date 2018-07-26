@@ -102,6 +102,8 @@ class Proportional:
 
         Outputs (N x 2)
         '''
+        assert W.shape[0] == 4, 'Wrong policy dimensions'
+         
         e = self.target - X # (10, 2)
 
         oz = e[:, 0] >= 0
@@ -126,6 +128,6 @@ if __name__ == "__main__":
 #     print pol.sample(ws , np.array([-3, -1, 2]).reshape(-1,1))
     tgt = np.array([10, 0]).reshape(-1)
     off = np.array([150, 150]).reshape(-1)
-    pol = Proportional(-326, 326, tgt, off)
-    w0 = np.array([10, 0, 10, 0]).reshape(-1)
-    print pol.sample(w0, np.array([0, 0]))
+    # pol = Proportional(-326, 326, tgt, off)
+    # w0 = np.array([10, 0, 10, 0]).reshape(-1)
+    # print pol.sample(w0, np.array([0, 0]))

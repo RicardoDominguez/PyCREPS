@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import pdb
 import time
 from numpy.random import multivariate_normal as mvnrnd
+from cost import CostExpQuad
 
 from policy import Proportional
-from sim_opt import simulateRobot
 
 def robotModel(odoL, odoR, theta):
     '''
@@ -225,7 +225,7 @@ class Scenario:
         y3 = delta_y
         x4 = x3 + m2 * np.cos(ang0 + delta_theta)
         y4 = y3 + m2 * np.sin(ang0 + delta_theta)
-        if(y2 != y4 and x2 != x4): # Prevent division by 0
+        if(np.abs(y2 - y4) > 0.000001 and np.abs(x2 - x4) > 0.000001): # Prevent division by 0
             a1 = (y2 - y4) / float(x2 - x4)
             a2 = np.tan(self.robot.theta - np.pi/2)
             xi = (y3 - y4 + a1*x4 - x3*a2)/float(a1 - a2)
@@ -296,6 +296,11 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
     time_to_distance = -1
     collision = False
 
+    Kcost = np.array([0.005, 100]).reshape(1, -1)
+    target = np.array([10, 0]).reshape(1, -1)
+    cost = CostExpQuad(Kcost, target)
+    R = 0
+
     scn.initScenario(x0)
     x = x0
     if plot: scn.plot(False)
@@ -313,6 +318,9 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
         if time_to_distance != -1:
             ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
             dist_errors.append(pol.target[0] - x[0])
+        #print x
+        R += cost.sample(x)
+    #print R
     return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
 
 def validatePolicy(scn, x0s, T, pol, w):
@@ -402,16 +410,16 @@ if __name__ == '__main__':
     # simulate(scn, x0)
 
     scn = Scenario(0.1)
-    x0 = np.array([240, np.pi/3])
+    x0 = np.array([130, np.pi/3])
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
-    w = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
+    w = np.array([-6.36, 95.62, 18.9, -104.17]).reshape(-1)
     w2 = np.array([-2, 100, 2, -100]).reshape(-1)
-    T = 5
+    T = 1000
 
     #simulateStep(scn, x0, T, pol, w)
-    simulateResults(scn, x0, T, pol, w)
+    x = performanceMetric(scn, x0, T, pol, w)
     #compareWeights(scn, x0, T, pol, w, w2)
     #x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
     #validatePolicy(scn, x0s, T, pol, w)
