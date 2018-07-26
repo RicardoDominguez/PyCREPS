@@ -15,6 +15,8 @@ from simulator import validatePolicy
 from sim_opt import OptMod
 
 # Good weights... [-31, 252, -24.6, -105.74]
+# Better weights... [-19.3, 190.8, -13.23, -115.6]
+# Trained for wider range... [-10.5, 222.85, -0.0116, -110.8]
 
 # Indexes for the state variables being fed to GP, policy, cost function
 dyni = [1]      # GP inputs
@@ -27,7 +29,8 @@ nstates = 2
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
 K = 20             # Number of policy iterations
-M = 10000           # Number of simulated rollouts
+M = 500           # Number of simulated policies
+N = 20            # Number of rollouts per policy
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
@@ -68,7 +71,7 @@ rewards.append(R)
 for k in xrange(K):
     print '--------------------------------------'
     print 'Run', k+1, 'out of', K
-    R, W, F = predictReward(mod, x0, M, H, hpol)
+    R, W, F = predictReward(mod, x0, M, N, H, hpol)
     hpol.update(W, R, F, eps)
     R = sys.rollout(scn, x0, H, hpol, pol, cost)
     rewards.append(R)

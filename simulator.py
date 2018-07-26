@@ -410,16 +410,16 @@ if __name__ == '__main__':
     # simulate(scn, x0)
 
     scn = Scenario(0.1)
-    x0 = np.array([130, np.pi/3])
+    x0 = np.array([120, np.pi/8])
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
-    w = np.array([-6.36, 95.62, 18.9, -104.17]).reshape(-1)
-    w2 = np.array([-2, 100, 2, -100]).reshape(-1)
+    w = np.array([-16.8, 248.63, -6.44, -100]).reshape(-1)
+    w2 = np.array([-10.5, 222.85, -0.0116, -110.8]).reshape(-1)
     T = 1000
 
-    #simulateStep(scn, x0, T, pol, w)
-    x = performanceMetric(scn, x0, T, pol, w)
+    simulateStep(scn, x0, T, pol, w)
+    #x = performanceMetric(scn, x0, T, pol, w)
     #compareWeights(scn, x0, T, pol, w, w2)
     #x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
     #validatePolicy(scn, x0s, T, pol, w)
