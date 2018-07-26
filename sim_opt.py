@@ -161,7 +161,7 @@ def simulateRobot(M, H, x0, dt, w, pol):
         arr2 = arr2 + delta_theta # ang 1
         x4 = delta_x + arr1 * np.cos(arr2)
         y4 = delta_y + arr1 * np.sin(arr2)
-        robot_m = arr1
+        robot_m = np.copy(arr1)
 
         arr1 = y2 - y4 # diff y2 y4
         arr2 = x2 - x4 # diff x2 x4
@@ -187,7 +187,7 @@ def simulateRobot(M, H, x0, dt, w, pol):
 
         a2 = None
 
-        indxSp1 = np_and(dx_no0 > 1e-6, dy_no0 > 1e-6, y4_no0 > 1e-6) # ok triang
+        indxSp1 = np_and(np_and(dx_no0 > 1e-6, dy_no0 > 1e-6) , y4_no0 > 1e-6) # ok triang
         a_2_ok = dx_no0[indxSp1]
         b_2_ok = dy_no0[indxSp1]
 
@@ -218,11 +218,11 @@ def simulateRobot(M, H, x0, dt, w, pol):
 
         x = np.concatenate([arr1.reshape(-1,1), arr2.reshape(-1,1)], 1)
         print t
-
+        print x[0,:]
     print 'done'
 if __name__ == '__main__':
-    M = 10000
-    H = 1000
+    M = 1
+    H = 5
     dt = 0.1
 
     x_mu = np.array([180, np.pi/4]).reshape(-1)
@@ -236,5 +236,8 @@ if __name__ == '__main__':
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
+
+    x0[0, :] = np.array([240, np.pi/3])
+    w[:, 0]  = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
 
     simulateRobot(M, H, x0, dt, w, pol)

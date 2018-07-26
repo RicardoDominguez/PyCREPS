@@ -123,9 +123,9 @@ class Scenario:
         '''
         odoL = u[0] * self.dt * 12
         odoR = u[1] * self.dt * 12
-        self.stepMotors(odoL, odoR) # New robot position
+        delta_x, delta_y, delta_theta = self.stepMotors(odoL, odoR) # New robot position
         valid_sample, m2 = self.sampleTOFSensor() # New tof sample
-        d_wall, theta_wall = self.computeDistanceAngle(odoL, odoR, self.robot.m, m2) # New state estimation
+        d_wall, theta_wall = self.computeDistanceAngle(self.robot.m, m2, delta_x, delta_y, delta_theta) # New state estimation
         self.robot.m = m2
         x = np.array([d_wall, theta_wall]).reshape(-1)
         return x
@@ -141,6 +141,7 @@ class Scenario:
         delta_x, delta_y, delta_theta = robotModel(odoL, odoR, self.robot.theta)
         self.robot.x, self.robot.y = self.detectCollision(delta_x, delta_y)
         self.robot.theta += delta_theta
+        return delta_x, delta_y, delta_theta
 
     def detectCollision(self, delta_x, delta_y):
         '''
@@ -174,7 +175,6 @@ class Scenario:
         '''
         x_i = -(self.robot.y - self.wall.y - self.robot.x*np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) + self.wall.x*np.tan(self.wall.theta))/(np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) - np.tan(self.wall.theta))
         y_i = np.tan(self.robot.sensor_theta + self.robot.theta - np.pi / 2) * (x_i - self.robot.x) + self.robot.y
-
         o_abs = np.remainder(self.robot.sensor_theta + self.robot.theta - np.pi / 2 + 100000*np.pi, 2*np.pi)
         if (o_abs >= 0) and (o_abs <= np.pi / 2):
             valid = ((x_i - self.robot.x) >= 0) and ((y_i - self.robot.y) >= 0)
@@ -195,7 +195,7 @@ class Scenario:
 
         return valid, m # Measurements can only be integers
 
-    def computeDistanceAngle(self, odoL, odoR, m1, m2):
+    def computeDistanceAngle(self, m1, m2, delta_x, delta_y, delta_theta):
         '''
         Inputs
             odoL - Displacement odometry (left wheel)
@@ -207,7 +207,7 @@ class Scenario:
             d_wall  - Distance from robot to the wall
             d_theta - Angle of wall with respect to the robot
         '''
-        delta_x, delta_y, delta_theta = robotModel(odoL, odoR, self.robot.theta)
+        #delta_x, delta_y, delta_theta = robotModel(odoL, odoR, self.robot.theta)
         theta_s = self.robot.sensor_theta
         ang0 = theta_s + self.robot.theta - np.pi/2
 
@@ -225,7 +225,6 @@ class Scenario:
         y3 = delta_y
         x4 = x3 + m2 * np.cos(ang0 + delta_theta)
         y4 = y3 + m2 * np.sin(ang0 + delta_theta)
-
         if(y2 != y4 and x2 != x4): # Prevent division by 0
             a1 = (y2 - y4) / float(x2 - x4)
             a2 = np.tan(self.robot.theta - np.pi/2)
@@ -314,7 +313,6 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
         if time_to_distance != -1:
             ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
             dist_errors.append(pol.target[0] - x[0])
-
     return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
 
 def validatePolicy(scn, x0s, T, pol, w):
@@ -403,36 +401,36 @@ if __name__ == '__main__':
     # scn.initScenario(x0)
     # simulate(scn, x0)
 
-    # scn = Scenario(0.1)
-    # x0 = np.array([240, np.pi/3])
-    # target = np.array([10, 0]).reshape(-1)
-    # offset = np.array([150, 150]).reshape(-1)
-    # pol = Proportional(-324, 324, target, offset)
-    # w = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
-    # w2 = np.array([-2, 100, 2, -100]).reshape(-1)
-    # T = 1000
-    #
-    # #simulateStep(scn, x0, T, pol, w)
-    # #simulateResults(scn, x0, T, pol, w)
-    # #compareWeights(scn, x0, T, pol, w, w2)
-    # x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
-    # validatePolicy(scn, x0s, T, pol, w)
-    # #simulateStep(scn, np.array([200, np.pi/4.5]), T, pol, w.reshape(-1))
-
-    M = 100
-    H = 300
-    dt = 0.1
-
-    x_mu = np.array([180, np.pi/4]).reshape(-1)
-    x_sigma = np.eye(x_mu.shape[0]) * [50, np.pi/10]
-    x0 = mvnrnd(x_mu, x_sigma, M)
-
-    hpol_mu =  np.array([-2, 100, 2, -100]).reshape(-1)
-    hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20]
-    w = mvnrnd(hpol_mu, hpol_sigma, M).T
-
+    scn = Scenario(0.1)
+    x0 = np.array([240, np.pi/3])
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
+    w = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
+    w2 = np.array([-2, 100, 2, -100]).reshape(-1)
+    T = 5
 
-    simulateRobot(M, H, x0, dt, w, pol)
+    #simulateStep(scn, x0, T, pol, w)
+    simulateResults(scn, x0, T, pol, w)
+    #compareWeights(scn, x0, T, pol, w, w2)
+    #x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
+    #validatePolicy(scn, x0s, T, pol, w)
+    #simulateStep(scn, np.array([200, np.pi/4.5]), T, pol, w.reshape(-1))
+
+    # M = 100
+    # H = 300
+    # dt = 0.1
+    #
+    # x_mu = np.array([180, np.pi/4]).reshape(-1)
+    # x_sigma = np.eye(x_mu.shape[0]) * [50, np.pi/10]
+    # x0 = mvnrnd(x_mu, x_sigma, M)
+    #
+    # hpol_mu =  np.array([-2, 100, 2, -100]).reshape(-1)
+    # hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20]
+    # w = mvnrnd(hpol_mu, hpol_sigma, M).T
+    #
+    # target = np.array([10, 0]).reshape(-1)
+    # offset = np.array([150, 150]).reshape(-1)
+    # pol = Proportional(-324, 324, target, offset)
+    #
+    # simulateRobot(M, H, x0, dt, w, pol)
