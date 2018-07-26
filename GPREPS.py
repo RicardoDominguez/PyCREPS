@@ -12,8 +12,9 @@ from simulator import compareWeights
 from simulator import Scenario
 from simulator import validatePolicy
 
-from model_theano import OptMod
+from sim_opt import OptMod
 
+# Good weights... [-31, 252, -24.6, -105.74]
 
 # Indexes for the state variables being fed to GP, policy, cost function
 dyni = [1]      # GP inputs
@@ -25,12 +26,12 @@ nstates = 2
 
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
-K = 10             # Number of policy iterations
-M = 100           # Number of simulated rollouts
+K = 20             # Number of policy iterations
+M = 10000           # Number of simulated rollouts
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
-x0 = np.array([200, np.pi/3]) # Initial state
+x0 = np.array([200, np.pi/4]) # Initial state
 H = 300 # Simulation horizon
 
 # Low level policy
@@ -79,4 +80,4 @@ plt.show()
 compareWeights(scn, x0, H, pol, hpol_mu, hpol.mu)
 
 x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
-validatePolicy(scn, x0s, H, pol, w)
+validatePolicy(scn, x0s, H, pol, hpol.mu)

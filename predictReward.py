@@ -1,7 +1,7 @@
 import numpy as np
 import pdb
 import matplotlib.pyplot as plt
-
+from simulator import Scenario
 def predictReward(mod, x0, M, H, hipol):
     '''
     Compute expected rewards by sampling trayectories using the forward models.
@@ -12,8 +12,9 @@ def predictReward(mod, x0, M, H, hipol):
 
     x0s = np.empty((M, 2))
     x0s[:, 0] = 200
-    x0s[:, 1] = np.pi/3 #np.random.rand() * 0.5236 + 0.5236
-    R = mod.simulateRobot(M, H, x0s, W)
+    x0s[:, 1] = np.random.rand() * 0.5236 + 0.5236
+    #pdb.set_trace()
+    R = mod.simulateRobot(M, H, x0s, W.T)
 
     #plt.plot(R)
     #plt.show()

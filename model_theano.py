@@ -312,6 +312,7 @@ class OptMod:
 
             x = np.concatenate([arr2.reshape(-1,1), arr3.reshape(-1,1)], 1)
             R += cost.sampleMat(x)
+
         return R
 
 if __name__ == '__main__':
