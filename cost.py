@@ -34,7 +34,22 @@ class CostExpQuad:
         else:
             return np.array([[-2]])
 
-# if __name__ == '__main__':
+    def sampleMat(self, x):
+        '''
+        Inputs
+            x   states      (N x S)
+
+        Outputs
+            C   cost        (N x 1)
+        '''
+        C = np.empty((x.shape[0], 1))
+        vald = x[:, 0] > 0.1
+        C[vald] = np.exp(-np.sum(np.abs(x[vald, :] - self.z) * self.w, 1)).reshape(-1, 1)
+        vald = np.invert(vald)
+        C[vald] = 0
+        return C
+
+if __name__ == '__main__':
     # w = np.array([0.005, 100]).reshape(1, -1)
     # t = np.array([20, 0]).reshape(1, -1)
     # cost = CostExpQuad(w, t)
@@ -45,9 +60,11 @@ class CostExpQuad:
     # print 'reg ang', cost.sample([60, np.pi/16])
     # print 'ttt ang', cost.sample([60, 0])
     # print 'ttt tof', cost.sample([30, np.pi/16])
-    # w = np.array([0.5, 0]).reshape(1, -1)
-    # t = np.array([10, 0]).reshape(1, -1)
-    # cost = CostExpQuad(w, t)
+    w = np.array([0.5, 0]).reshape(1, -1)
+    t = np.array([10, 0]).reshape(1, -1)
+    cost = CostExpQuad(w, t)
+    x = np.array([[10, 0], [20, 0], [-1, 0]])
+    print cost.sampleMat(x)
     # print 'zero ', cost.sample([10, 20])
     # print 'at wall', cost.sample([0, 0])
     # print 'init ', cost.sample([30, 0])

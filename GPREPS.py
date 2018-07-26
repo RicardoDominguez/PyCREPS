@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import pdb
 from simulator import compareWeights
 from simulator import Scenario
+from simulator import validatePolicy
+
+from model_theano import OptMod
 
 
 # Indexes for the state variables being fed to GP, policy, cost function
@@ -23,11 +26,11 @@ nstates = 2
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
 K = 10             # Number of policy iterations
-M = 1000           # Number of simulated rollouts
+M = 100           # Number of simulated rollouts
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
-x0 = np.array([200, np.pi/4]) # Initial state
+x0 = np.array([200, np.pi/3]) # Initial state
 H = 300 # Simulation horizon
 
 # Low level policy
@@ -49,20 +52,22 @@ target = np.array([10, 0]).reshape(1, -1)
 cost = CostExpQuad(Kcost, target)
 
 # System being
-scn = Scenario(0.1)
+dt = 0.1
+scn = Scenario(dt)
 sys = Plant()
-
+mod = OptMod(dt, pol, cost)
 
 rewards = []
 
 # Policy iteration
 X, Y = np.empty([0, nstates]), np.empty([0, nstates])
+'Initial rollout....'
 R = sys.rollout(scn, x0, H, hpol, pol, cost)
 rewards.append(R)
 for k in xrange(K):
     print '--------------------------------------'
     print 'Run', k+1, 'out of', K
-    R, W, F = predictReward(scn, x0, M, H, hpol, pol, cost)
+    R, W, F = predictReward(mod, x0, M, H, hpol)
     hpol.update(W, R, F, eps)
     R = sys.rollout(scn, x0, H, hpol, pol, cost)
     rewards.append(R)
@@ -72,3 +77,6 @@ plt.plot(rewards)
 plt.show()
 
 compareWeights(scn, x0, H, pol, hpol_mu, hpol.mu)
+
+x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
+validatePolicy(scn, x0s, H, pol, w)
