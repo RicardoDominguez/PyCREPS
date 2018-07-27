@@ -5,10 +5,11 @@ from policy import Proportional
 from cost import CostExpQuad
 
 class OptMod:
-    def __init__(self, dt, pol, cost):
+    def __init__(self, dt, pol, cost, noise = False):
         self.dt = dt
         self.pol = pol
         self.cost = cost
+        self.noise = noise
 
     def simulateRobot(self, M, H, x0, w):
         '''
@@ -160,6 +161,8 @@ class OptMod:
             indx5[arr4] = np_and(indx1[arr4], indx2[arr4])
 
             arr1[indx5] = sqrt(power(arr2[indx5], 2) + power(arr3[indx5],2)) # m2
+            if self.noise: arr1[indx5] += (np.random.rand(np.sum(indx5)) - 0.5) * 4
+            arr1[indx5] = np.round(arr1[indx5])
             indx5 = invert(indx5) # not valid
             arr1[np_or(indx5, arr1 > 255)] = 255
 

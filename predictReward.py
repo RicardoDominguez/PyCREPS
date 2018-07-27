@@ -14,7 +14,7 @@ def predictReward(mod, x0, M, N, H, hipol):
 
     x0s = np.empty((M*N, 2))
     x0s[:, 0] = 200
-    x0s[:, 1] = np.random.rand(M*N) * 0.87 + 0.5236
+    x0s[:, 1] = np.pi/4 # np.random.rand(M*N) * 0.87 + 0.5236
     #pdb.set_trace()
     Rs = mod.simulateRobot(M*N, H, x0s, Ws.T) # (M * N)
     R = np.mean(np.split(Rs, M, axis = 0), axis = 1)

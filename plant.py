@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 
 class Plant:
     def rollout(self, scn, x0, H, hpol, pol, cost):
@@ -9,8 +10,9 @@ class Plant:
         x = x0
         for t in xrange(H): # For each step within horizon
             u = pol.sample(w, x)
-            y = scn.step(u)
-            R += cost.sample(y)
+            y, ry = scn.step(u)
+            #pdb.set_trace()
+            R += cost.sample(ry)
             x = y
             #scn.plot()
 
