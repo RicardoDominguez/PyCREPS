@@ -93,10 +93,11 @@ class Wall:
         plt.plot([x1, x2], [y1, y2], 'g')
 
 class Scenario:
-    def __init__(self, dt = 0.02):
+    def __init__(self, dt = 0.02, noise = True):
         self.robot = Robot()
         self.wall = Wall()
         self.dt = dt
+        self.noise = noise
 
     def initScenario(self, x):
         '''
@@ -124,11 +125,17 @@ class Scenario:
         odoL = u[0] * self.dt * 12
         odoR = u[1] * self.dt * 12
         delta_x, delta_y, delta_theta = self.stepMotors(odoL, odoR) # New robot position
-        valid_sample, m2 = self.sampleTOFSensor() # New tof sample
-        d_wall, theta_wall = self.computeDistanceAngle(self.robot.m, m2, delta_x, delta_y, delta_theta) # New state estimation
-        self.robot.m = m2
-        x = np.array([d_wall, theta_wall]).reshape(-1)
-        return x
+        valid_sample, r_m2, ob_m2 = self.sampleTOFSensor() # New tof sample
+        d_wall, theta_wall = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta) # New state estimation
+
+        d_r, t_r = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta) # New state estimation
+
+        self.robot.m = ob_m2
+        ob_x = np.array([d_wall, theta_wall]).reshape(-1)
+
+        r_x = np.array([d_r, t_r]).reshape(-1)
+
+        return ob_x, r_x
 
     def stepMotors(self, odoL, odoR):
         '''
@@ -187,13 +194,18 @@ class Scenario:
 
         if valid:
             m = np.sqrt((self.robot.x - x_i)**2 + (self.robot.y - y_i)**2)
+            if self.noise:
+                ob_m = m + (np.random.rand() - 0.5) * 4
+            else:
+                ob_m = np.copy(m)
+
             if m > 255:
                 valid = False
                 m = 255
         else:
             m = 255
 
-        return valid, m # Measurements can only be integers
+        return valid, round(m), round(ob_m) # Measurements can only be integers
 
     def computeDistanceAngle(self, m1, m2, delta_x, delta_y, delta_theta):
         '''
@@ -284,7 +296,7 @@ def simulateStep(scn, x0, T, pol, w):
         print 'Distance ', x[0]
         print 'Computed angle ', x[1] * 180 / np.pi
         print 'Wheel speed ', u
-        x = scn.step(u)
+        x, rx = scn.step(u)
         scn.plot(True)
         # print 'Real angle ', (scn.wall.theta - scn.robot.theta) * 180 / np.pi
     plt.show()
@@ -306,20 +318,20 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
     if plot: scn.plot(False)
     for t in range(T):
         u = pol.sample(w, x)
-        x = scn.step(u)
+        x, rx = scn.step(u)
         if plot: scn.plot(False)
-        if x[0] <= pol.target[0]:
+        if rx[0] <= pol.target[0]:
             if time_to_distance == -1:
                 time_to_distance = t+1
-            if pol.target[0] - x[0] > max_overshoot:
+            if pol.target[0] - rx[0] > max_overshoot:
                 max_overshoot = pol.target[0] - x[0]
-            if x[0] < 0.1:
+            if rx[0] < 0.1:
                 collision = True
         if time_to_distance != -1:
-            ang_errors.append((pol.target[1] - x[1])*180 / np.pi)
-            dist_errors.append(pol.target[0] - x[0])
+            ang_errors.append((pol.target[1] - rx[1])*180 / np.pi)
+            dist_errors.append(pol.target[0] - rx[0])
         #print x
-        R += cost.sample(x)
+        R += cost.sample(rx)
     #print R
     return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
 

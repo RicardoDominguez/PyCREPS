@@ -28,9 +28,9 @@ nstates = 2
 
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
-K = 20             # Number of policy iterations
-M = 500           # Number of simulated policies
-N = 20            # Number of rollouts per policy
+K = 10             # Number of policy iterations
+M = 10000           # Number of simulated policies
+N = 1            # Number of rollouts per policy
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
@@ -57,9 +57,9 @@ cost = CostExpQuad(Kcost, target)
 
 # System being
 dt = 0.1
-scn = Scenario(dt)
+scn = Scenario(dt, noise = True)
 sys = Plant()
-mod = OptMod(dt, pol, cost)
+mod = OptMod(dt, pol, cost, noise = True)
 
 rewards = []
 
