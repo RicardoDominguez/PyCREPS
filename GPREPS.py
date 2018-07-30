@@ -4,6 +4,7 @@ import numpy as np
 from cost           import CostExpQuad
 from highpol        import HighPol
 from policy         import Proportional
+from policy         import PropInt
 from predictReward  import predictReward
 from plant          import Plant
 import matplotlib.pyplot as plt
@@ -28,25 +29,27 @@ nstates = 2
 
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
-K = 10             # Number of policy iterations
-M = 10000           # Number of simulated policies
+K = 20             # Number of policy iterations
+M = 100           # Number of simulated policies
 N = 1            # Number of rollouts per policy
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
 x0 = np.array([200, np.pi/4]) # Initial state
-H = 300 # Simulation horizon
+H = 1000 # Simulation horizon
 
 # Low level policy
+dt = 0.02
 minU = -324
 maxU = 324
 target = np.array([10, 0]).reshape(-1)
 offset = np.array([150, 150]).reshape(-1)
-pol = Proportional(minU, maxU, target, offset)
+#pol = Proportional(minU, maxU, target, offset)
+pol = PropInt(minU, maxU, target, offset, maxI = 20, minI = -20, dt = dt)
 
 # High level policy
-hpol_mu =  np.array([-2, 100, 2, -100]).reshape(-1)
-hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20]
+hpol_mu =  np.array([-2, 100, 2, -100, -0.001, 0.005, 0.001, -0.005]).reshape(-1)
+hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20, 5, 5, 5, 5]
 hpol = HighPol(hpol_mu, hpol_sigma)
 #pdb.set_trace()
 
@@ -56,10 +59,9 @@ target = np.array([10, 0]).reshape(1, -1)
 cost = CostExpQuad(Kcost, target)
 
 # System being
-dt = 0.1
-scn = Scenario(dt, noise = True)
+scn = Scenario(dt, noise = False)
 sys = Plant()
-mod = OptMod(dt, pol, cost, noise = True)
+mod = OptMod(dt, pol, cost, noise = False)
 
 rewards = []
 

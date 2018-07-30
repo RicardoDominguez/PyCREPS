@@ -30,9 +30,9 @@ class CostExpQuad:
         '''
         #return np.exp(-np.sum(np.power(x - self.z, 2) * self.w, 1)).reshape(-1, 1)
         if x[0] > 0.1:
-            return np.exp(-np.sum(np.abs(x - self.z) * self.w, 1)).reshape(-1, 1)
+            return np.exp(-np.sum(np.abs(x - self.z) * self.w, 1)).reshape(-1, 1) / 10
         else:
-            return np.array([[-1]])
+            return np.array([[-1]]) / 10
 
     def sampleMat(self, x):
         '''
@@ -47,7 +47,7 @@ class CostExpQuad:
         C[vald] = np.exp(-np.sum(np.abs(x[vald, :] - self.z) * self.w, 1)).reshape(-1, 1)
         vald = np.invert(vald)
         C[vald] = -1
-        return C
+        return C / 10
 
 if __name__ == '__main__':
     # w = np.array([0.005, 100]).reshape(1, -1)

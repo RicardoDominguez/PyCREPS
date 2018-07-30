@@ -18,6 +18,7 @@ class OptMod:
         '''
         dt = self.dt
         pol = self.pol
+        pol.reset()
         cost = self.cost
 
         TICKS_TO_MM = 12.0
@@ -162,7 +163,7 @@ class OptMod:
 
             arr1[indx5] = sqrt(power(arr2[indx5], 2) + power(arr3[indx5],2)) # m2
             if self.noise: arr1[indx5] += (np.random.rand(np.sum(indx5)) - 0.5) * 4
-            arr1[indx5] = np.round(arr1[indx5])
+            #arr1[indx5] = np.round(arr1[indx5])
             indx5 = invert(indx5) # not valid
             arr1[np_or(indx5, arr1 > 255)] = 255
 
