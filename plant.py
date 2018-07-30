@@ -4,6 +4,7 @@ import pdb
 class Plant:
     def rollout(self, scn, x0, H, hpol, pol, cost):
         w = hpol.mu.reshape(-1, 1)
+        pol.reset()
         R = 0
 
         scn.initScenario(x0)

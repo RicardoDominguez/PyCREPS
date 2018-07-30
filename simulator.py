@@ -205,7 +205,7 @@ class Scenario:
         else:
             m = 255
 
-        return valid, round(m), round(ob_m) # Measurements can only be integers
+        return valid, m, ob_m #round(m), round(ob_m) # Measurements can only be integers
 
     def computeDistanceAngle(self, m1, m2, delta_x, delta_y, delta_theta):
         '''
@@ -367,9 +367,11 @@ def validatePolicy(scn, x0s, T, pol, w):
                 print 'DID NOT ACHIEVE THE TARGET DISTANCE'
 
     print '\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2)
-    print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
-    print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance), 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
-    print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
+    if N - n_collisions != 0:
+        print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
+    if len(a_time_to_distance) > 0:
+        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance), 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
+        print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
 
 
 def simulateResults(scn, x0, T, pol, w, id = 0):

@@ -195,6 +195,94 @@ class PropDerv:
         u[u < self.min] = self.min
         return u
 
+class PropInt:
+    def __init__(self, min, max, target, offset, maxI = 0, minI = 0, dt = 1):
+        self.min = min
+        self.max = max
+        self.target = target # (2, )
+        self.offset = offset
+        self.init = False
+        self.maxI = maxI
+        self.minI = minI
+        self.dt = dt
+
+    def reset(self):
+        self.init = False
+
+    def sample(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (8 x 1)
+            X   vector of states                (2, )
+        '''
+        # If initialization is needed
+        if not self.init:
+            self.init = True
+            self.I = np.zeros(2)
+
+        # Weights
+        Kp = np.copy(W[0:4].reshape(2, 2))
+        Ki = np.copy(W[4: ].reshape(2, 2))
+        
+        # Error
+        e = (self.target - X).reshape(-1, 1)
+        if(e[0] >= 0):
+            e[0] = np.log(e[0] + 1)
+        else:
+            e[0] = np.log(1.0 / (-e[0] + 1))
+
+        # Integral component
+        self.I += np.matmul(Ki, e * self.dt).reshape(-1)
+        self.I[self.I > self.maxI] = self.maxI
+        self.I[self.I < self.minI] = self.minI
+
+        # Compute and saturate output
+        u = np.matmul(Kp, e).reshape(-1) + self.offset + self.I
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+
+        return u
+
+    def sampleMat(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (8 x N)
+            X   vector of states                (N x 2)
+
+        Outputs (N x 2)
+        '''
+        # Prevent errors later on when reshaping weights
+        assert W.shape[0] == 8, 'Wrong policy dimensions'
+
+        # If initialization is needed
+        if not self.init:
+            self.init = True
+            self.I = np.zeros((X.shape[0], 2)) # (N, 2)
+
+        # Weights
+        Kp = np.copy(W[0:4, :].reshape(2, 2, -1))
+        Ki = np.copy(W[4: , :].reshape(2, 2, -1))
+
+        # Error
+        e = self.target - X
+        oz = e[:, 0] >= 0
+        e[oz, 0] = np.log(e[oz, 0] + 1)
+        oz = np.invert(oz)
+        e[oz, 0] = np.log(-1.0 / (e[oz, 0] - 1))
+        e = e.T.reshape(2, 1, -1)
+
+        # Integral component
+        self.I += np.einsum('ijn,jkn->ikn', Ki, e * self.dt)[:, 0, :].T
+        self.I[self.I > self.maxI] = self.maxI
+        self.I[self.I < self.minI] = self.minI
+
+        # Compute output
+        u = np.einsum('ijn,jkn->ikn', Kp, e)[:, 0, :].T + self.offset + self.I
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+
+        return u
+
 if __name__ == "__main__":
 #     pol = TilePol(5, 1, -2, 10, -2)
 #     ws = np.array([[1,1,1],[2,2,2],[3,3,3],[4,4,4],[5,5,5]])
