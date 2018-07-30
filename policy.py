@@ -103,7 +103,7 @@ class Proportional:
         Outputs (N x 2)
         '''
         assert W.shape[0] == 4, 'Wrong policy dimensions'
-         
+
         e = self.target - X # (10, 2)
 
         oz = e[:, 0] >= 0
@@ -118,6 +118,79 @@ class Proportional:
         # K (2 x 2 x N)
         # e (2 x 1 x N)
         u = np.einsum('ijn,jkn->ikn', K, e)[:, 0, :].T + self.offset # (N x 2)
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+        return u
+
+class PropDerv:
+    def __init__(self, min, max, target, offset):
+        self.min = min
+        self.max = max
+        self.target = target # (2, )
+        self.offset = offset
+        self.init = False
+
+    def reset(self):
+        self.init = False
+
+    def sample(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (4 x 1)
+            X   vector of states                (2, )
+        '''
+        e = (self.target - X).reshape(-1, 1) # error
+        if(e[0] >= 0):
+            e[0] = np.log(e[0] + 1)
+        else:
+            e[0] = np.log(1.0 / (-e[0] + 1))
+
+        if not self.init:
+            self.init = True
+            self.prev_e = e
+
+        de = e - prev_e
+
+        emat = np.concatenate(e, de)
+
+        K = np.copy(W.reshape(2, 4))
+
+        u = np.matmul(K, emat).reshape(-1) + self.offset
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+        return u
+
+    def sampleMat(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (4 x N)
+            X   vector of states                (N x 2)
+
+        Outputs (N x 2)
+        '''
+        assert W.shape[0] == 4, 'Wrong policy dimensions'
+
+        e = self.target - X # (10, 2)
+
+        oz = e[:, 0] >= 0
+        e[oz, 0] = np.log(e[oz, 0] + 1)
+        oz = np.invert(oz)
+        e[oz, 0] = np.log(-1.0 / (e[oz, 0] - 1))
+
+        e = e.T.reshape(2, 1, -1)
+
+        if not self.init:
+            self.init = True
+            self.prev_e = e
+
+        de = e - self.prev_e
+        emat = np.concatenate(e, de)
+
+        K = np.copy(W.reshape(2, 4, -1))
+
+        # K (2 x 2 x N)
+        # e (2 x 1 x N)
+        u = np.einsum('ijn,jkn->ikn', K, emat)[:, 0, :].T + self.offset # (N x 2)
         u[u > self.max] = self.max
         u[u < self.min] = self.min
         return u
