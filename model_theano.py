@@ -9,17 +9,7 @@ from cost import CostExpQuad
 import numpy as np
 import pdb
 
-def compile_fwd_move():
-    delta_l = T.dvector('delta_l')
-    robot_theta = T.dvector('robot_theta')
-    delta_x = T.dvector('delta_x')
-    delta_y = T.dvector('delta_y')
-
-    delta_x = delta_l * T.cos(robot_theta)
-    delta_y = delta_l * T.sin(robot_theta)
-    return function([delta_l, robot_theta], [delta_x, delta_y])
-
-def compile_rot_move():
+def compile_robot_model():
     delta_l = T.dvector('delta_l')
     delta_r = T.dvector('delta_r')
     robot_theta = T.dvector('robot_theta')
@@ -27,36 +17,54 @@ def compile_rot_move():
     delta_y = T.dvector('delta_y')
     delta_theta = T.dvector('delta_theta')
     ROBOT_LENGTH = T.constant(280.)
+    PI = T.constant(np.pi)
 
-    wd = (delta_r - delta_l) / ROBOT_LENGTH
+    robot_x = T.dvector('robot_x')
+    robot_y = T.dvector('robot_y')
+    wall_x = T.dvector('wall_x')
+    wall_y = T.dvector('wall_y')
+    wall_theta = T.dvector('wall_theta')
+
+    # Odometry difference, prevent division by 0 resulting in NaN
+    odo_diff = (delta_r - delta_l)
+    odo_diff_no_zero = T.switch(T.abs(odo_diff) < 1e-3, 1, odo_diff)
+
+    # Robot model
+    wd = odo_diff_no_zero / ROBOT_LENGTH
     R = (delta_l + delta_r) / (2 * wd)
     sum_wd_theta = wd + robot_theta
     delta_x = R * (T.sin(sum_wd_theta) - T.sin(robot_theta))
     delta_y = R * (T.cos(robot_theta) - T.cos(sum_wd_theta))
     delta_theta = wd
-    return function([delta_l, delta_r, robot_theta], [delta_x, delta_y, delta_theta])
 
-def compile_wall_position():
-    robot_x = T.dvector('robot_x')
-    robot_y = T.dvector('robot_y')
-    delta_x = T.dvector('delta_x')
-    delta_y = T.dvector('delta_y')
-    wall_x = T.dvector('wall_x')
-    wall_y = T.dvector('wall_y')
-    wall_theta = T.dvector('wall_theta')
+    # Compute wall position
     tan_wall_theta = T.tan(wall_theta)
     x_i = (delta_y*robot_x + delta_x * (wall_y - robot_y - wall_x*tan_wall_theta))/(delta_y - delta_x*tan_wall_theta)
     y_i = robot_y + (delta_y*(x_i - robot_x))/delta_x
-    x_delta_x = robot_x + delta_x
-    return function([robot_x, robot_y, delta_x, delta_y, wall_x, wall_y, wall_theta], [x_i, y_i, x_delta_x])
+
+    # Check for collision
+    delta_xi = x_i - robot_x
+    collision = (T.sgn(delta_xi) == T.sgn(delta_x)) & (abs(delta_xi) < abs(delta_x))
+
+    # Update robot position (accounting for collision)
+    robot_x = T.switch(collision, x_i, robot_x + delta_x)
+    robot_y = T.switch(collision, y_i, y + delta_y)
+    robot_theta = robot_theta + delta_theta
+
+    # Sample TOF sensor
+    sensor_theta = T.constant(18 / (180.0) * PI)
+    robot_angle = robot_theta + (sensor_theta - PI/2)
+    tan_robot_theta = T.tan(robot_angle)
+    xi = (robot_y - wall_y - robot_x*tan_robot_theta + wall_x*tan_wall_theta)/(tan_wall_theta - tan_robot_theta)
+    xi_minus_x = xi - robot_x
+    yi_minus_y = tan_robot_theta * (xi - robot_x)
+    ms = T.sqrt(xi_minus_x ** 2 + yi_minus_y ** 2)
+
+    valid = ()
+    #return function([delta_l, delta_r, robot_theta], [delta_x, delta_y, delta_theta])
 
 def compile_sample_tof():
-    robot_theta = T.dvector('robot_theta')
-    robot_x = T.dvector('robot_x')
-    wall_y = T.dvector('wall_y')
-    robot_y = T.dvector('robot_y')
-    wall_x = T.dvector('wall_x')
-    wall_theta = T.dvector('wall_theta')
+
     tan_wall_theta = T.tan(wall_theta)
     sensor_theta = T.constant(18 / (180.0) * np.pi)
     robot_angle = robot_theta + (sensor_theta - np.pi/2)
