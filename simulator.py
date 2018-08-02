@@ -204,6 +204,7 @@ class Scenario:
                 m = 255
         else:
             m = 255
+            ob_m = 255
 
         return valid, m, ob_m #round(m), round(ob_m) # Measurements can only be integers
 

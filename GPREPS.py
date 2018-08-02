@@ -5,6 +5,7 @@ from cost           import CostExpQuad
 from highpol        import HighPol
 from policy         import Proportional
 from policy         import PropInt
+from policy         import PID
 from predictReward  import predictReward
 from plant          import Plant
 import matplotlib.pyplot as plt
@@ -29,8 +30,8 @@ nstates = 2
 
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
-K = 20             # Number of policy iterations
-M = 100           # Number of simulated policies
+K = 10             # Number of policy iterations
+M = 1000           # Number of simulated policies
 N = 1            # Number of rollouts per policy
 NinitRolls = 1     # Number of initial rollouts
 
@@ -45,11 +46,11 @@ maxU = 324
 target = np.array([10, 0]).reshape(-1)
 offset = np.array([150, 150]).reshape(-1)
 #pol = Proportional(minU, maxU, target, offset)
-pol = PropInt(minU, maxU, target, offset, maxI = 20, minI = -20, dt = dt)
+pol = PID(minU, maxU, target, offset, maxI = 20, minI = -20, dt = dt)
 
 # High level policy
-hpol_mu =  np.array([-2, 100, 2, -100, -0.001, 0.005, 0.001, -0.005]).reshape(-1)
-hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20, 5, 5, 5, 5]
+hpol_mu =  np.array([-2, 100, 2, -100, 0,0,0,0,0,0,0,0]).reshape(-1)
+hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20, 0,0,0,0,0,0,0,0]
 hpol = HighPol(hpol_mu, hpol_sigma)
 #pdb.set_trace()
 
