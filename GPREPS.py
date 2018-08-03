@@ -27,7 +27,7 @@ M = 100           # Number of simulated rollouts
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
-x0 = np.array([130, np.pi/3]) # Initial state
+x0 = np.array([240, np.pi/4]) # Initial state
 H = 300 # Simulation horizon
 
 # Low level policy

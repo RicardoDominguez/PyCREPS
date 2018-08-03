@@ -295,7 +295,7 @@ class Scenario:
 
 def simulateStep(scn, x0, T, pol, w):
     scn.initScenario(x0)
-    scn.plot(False)
+    scn.plot(True)
     x = x0
     for t in range(T):
         u = pol.sample(w, x)
@@ -303,7 +303,9 @@ def simulateStep(scn, x0, T, pol, w):
         print 'Computed angle ', x[1] * 180 / np.pi
         print 'Wheel speed ', u
         x = scn.step(u)
-        scn.plot(False)
+        print t
+        scn.plot(True)
+        plt.savefig('w1-' + str(t) + '.png')
         # print 'Real angle ', (scn.wall.theta - scn.robot.theta) * 180 / np.pi
     plt.show()
 
@@ -379,15 +381,15 @@ if __name__ == '__main__':
     # scn.initScenario(x0)
     # simulate(scn, x0)
 
-    scn = Scenario(0.1)
+    scn = Scenario(0.2)
     x0 = np.array([240, np.pi/3])
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
     pol = Proportional(-324, 324, target, offset)
     w = np.array([-5.5, 133, -5.4, -105]).reshape(-1)
-    w2 = np.array([-2, 100, 2, -100]).reshape(-1)
-    T = 300
+    w2 = np.array([-2, 50, 2, -50]).reshape(-1)
+    T = 45
 
-    #simulateStep(scn, x0, T, pol, w)
+    simulateStep(scn, x0, T, pol, w)
     #simulateResults(scn, x0, T, pol, w)
-    compareWeights(scn, x0, T, pol, w, w2)
+    #compareWeights(scn, x0, T, pol, w, w2)
