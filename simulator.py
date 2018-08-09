@@ -4,8 +4,11 @@ import pdb
 import time
 from numpy.random import multivariate_normal as mvnrnd
 from cost import CostExpQuad
+from highpol import HighPol
 
 from policy import Proportional
+from policy import PID
+
 
 def robotModel(odoL, odoR, theta):
     '''
@@ -277,7 +280,7 @@ class Scenario:
 
         # Plot sensor measurement
         if interactive:
-            valid_tof, m = self.sampleTOFSensor()
+            valid_tof, m, om = self.sampleTOFSensor()
             if valid_tof:
                 plt.plot([self.robot.x, self.robot.x + m * np.cos(self.robot.theta + self.robot.sensor_theta  - np.pi/2)], [self.robot.y, self.robot.y + m * np.sin(self.robot.theta + self.robot.sensor_theta - np.pi/2)], 'k')
             else:
@@ -336,7 +339,7 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
     #print R
     return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
 
-def validatePolicy(scn, x0s, T, pol, w):
+def validatePolicy(scn, x0s, T, pol, hpol, verbose = True):
     '''
     x0s is the set of initial states to test, with (N, 2), where N is the numer of tests
     '''
@@ -349,29 +352,32 @@ def validatePolicy(scn, x0s, T, pol, w):
     n_converge = 0;
     for i in xrange(N):
         x0 = x0s[i, :]
+        w = hpol.contextMean(x0.reshape(1,-1))
         collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(scn, x0, T, pol, w, plot = False)
         a_collision.append(collision)
-        print '-----------------------------------------------------------------'
-        print 'Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi)
+        if verbose:
+            print '-----------------------------------------------------------------'
+            print 'Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi)
         if collision:
-            print 'COLLISION OCURRED'
+            if verbose: print 'COLLISION OCURRED'
             n_collisions += 1
         else:
-            print 'No collision ocurred'
+            if verbose: print 'No collision ocurred'
             if time_to_distance != -1:
                 n_converge += 1
                 a_time_to_distance.append(time_to_distance)
                 a_max_overshoot.append(max_overshoot)
-                print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
-                print 'Time to target distance (s): ', time_to_distance * scn.dt
+                if verbose:
+                    print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
+                    print 'Time to target distance (s): ', time_to_distance * scn.dt
             else:
-                print 'DID NOT ACHIEVE THE TARGET DISTANCE'
+                if verbose: print 'DID NOT ACHIEVE THE TARGET DISTANCE'
 
     print '\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2)
     if N - n_collisions != 0:
         print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
     if len(a_time_to_distance) > 0:
-        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance), 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
+        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance)*scn.dt, 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
         print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
 
 
@@ -418,6 +424,12 @@ def compareWeights(scn, x0, T, pol, w1, w2):
     simulateResults(scn, x0, T, pol, w2, id = 2)
     plt.show()
 
+def sampleContext(N):
+    S = np.empty((N, 2))
+    S[:, 0] =  np.random.rand(N) * 170 + 50
+    S[:, 1] =  np.random.rand(N) * 0.87 + 0.5236
+    return S
+
 if __name__ == '__main__':
     # scn = Scenario(0.1)
     # x0 = np.array([240, np.pi/3])
@@ -425,13 +437,31 @@ if __name__ == '__main__':
     # simulate(scn, x0)
 
     scn = Scenario(0.1)
-    x0 = np.array([120, np.pi/8])
+    x0 = np.array([140, 52/180.0*np.pi])
     target = np.array([10, 0]).reshape(-1)
     offset = np.array([150, 150]).reshape(-1)
-    pol = Proportional(-324, 324, target, offset)
+    #pol = Proportional(-324, 324, target, offset)
+    dt = 0.02
+    minU = -324
+    maxU = 324
+    target = np.array([10, 0]).reshape(-1)
+    offset = np.array([150, 150]).reshape(-1)
+    #pol = Proportional(minU, maxU, target, offset)
+    pol = PID(minU, maxU, target, offset, maxI = 30, minI = -30, dt = dt)
     w = np.array([-16.8, 248.63, -6.44, -100]).reshape(-1)
     w2 = np.array([-10.5, 222.85, -0.0116, -110.8]).reshape(-1)
     T = 1000
+
+    mu = np.load('pol_mu.npy')
+    A = np.load('pol_A.npy')
+    # mu = np.array([-43, 556, -27.66, -166, -4.45, -15.53, -7, -6, 0, 0, 0, 0])
+    # A = np.array([[-0.139, 15],[-0.455, 28.65],[-0.19, 28.3],[0.0927,-0.42],[-0.01,395],[-0.0043,286],[0.0078,0.47],[-0.0012,3.7],[0, 0],[0,0],[0,0],[0,0]])
+    hpol = HighPol(mu, np.zeros((12,12)), ns = 2)
+    hpol.A = A
+    w = hpol.contextMean(x0.reshape(1,-1))
+    # simulateStep(scn, x0, T, pol, w)
+    #x0s = sampleContext(100)
+    #validatePolicy(scn, x0s, T, pol, hpol, verbose = 1)
 
     simulateStep(scn, x0, T, pol, w)
     #x = performanceMetric(scn, x0, T, pol, w)

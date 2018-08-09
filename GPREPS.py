@@ -16,6 +16,12 @@ from simulator import validatePolicy
 
 from sim_opt import OptMod
 
+def sampleContext(N):
+    S = np.empty((N, 2))
+    S[:, 0] =  np.random.rand(N) * 170 + 50
+    S[:, 1] =  np.random.rand(N) * 0.87 + 0.5236
+    return S
+
 # Good weights... [-31, 252, -24.6, -105.74]
 # Better weights... [-19.3, 190.8, -13.23, -115.6]
 # Trained for wider range... [-10.5, 222.85, -0.0116, -110.8]
@@ -30,14 +36,14 @@ nstates = 2
 
 # Algorithm parameters
 eps = 1            # Relative entropy bound (lower -> more exploration)
-K = 10             # Number of policy iterations
+K = 20             # Number of policy iterations
 M = 1000           # Number of simulated policies
 N = 1            # Number of rollouts per policy
 NinitRolls = 1     # Number of initial rollouts
 
 # Simulated episode parameters
 x0 = np.array([200, np.pi/4]) # Initial state
-H = 1000 # Simulation horizon
+H = 300 # Simulation horizon
 
 # Low level policy
 dt = 0.02
@@ -46,12 +52,12 @@ maxU = 324
 target = np.array([10, 0]).reshape(-1)
 offset = np.array([150, 150]).reshape(-1)
 #pol = Proportional(minU, maxU, target, offset)
-pol = PID(minU, maxU, target, offset, maxI = 20, minI = -20, dt = dt)
+pol = PID(minU, maxU, target, offset, maxI = 30, minI = -30, dt = dt)
 
 # High level policy
-hpol_mu =  np.array([-2, 100, 2, -100, 0,0,0,0,0,0,0,0]).reshape(-1)
-hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20, 0,0,0,0,0,0,0,0]
-hpol = HighPol(hpol_mu, hpol_sigma)
+hpol_mu =  np.array([-2, 100, 2, -100,0,0,0,0,0,0,0,0]).reshape(-1)
+hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20,0,0,0,0,0,0,0,0]
+hpol = HighPol(hpol_mu, hpol_sigma, ns = 2)
 #pdb.set_trace()
 
 # Cost function
@@ -80,10 +86,12 @@ for k in xrange(K):
     rewards.append(R)
     print 'Rewards', rewards
 
-plt.plot(rewards)
-plt.show()
+# plt.plot(rewards)
+# plt.show()
+# np.save('pol_mu', hpol.mu)
+# np.save('pol_A', hpol.A)
+#compareWeights(scn, x0, H, pol, hpol_mu, hpol.mu)
 
-compareWeights(scn, x0, H, pol, hpol_mu, hpol.mu)
-
-x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
-validatePolicy(scn, x0s, H, pol, hpol.mu)
+# x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
+x0s = sampleContext(100)
+validatePolicy(scn, x0s, H, pol, hpol, verbose = 0)

@@ -3,7 +3,8 @@ import pdb
 
 class Plant:
     def rollout(self, scn, x0, H, hpol, pol, cost):
-        w = hpol.mu.reshape(-1, 1)
+        w = hpol.contextMean(x0.reshape(1, -1))
+        # pdb.set_trace()
         pol.reset()
         R = 0
 
