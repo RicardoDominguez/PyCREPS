@@ -1,2 +1,3 @@
-Modules that must be tested:
-* dual_fnc -> minim
+Contextual Relative Entropy Policy Search implementation
+
+Custom scenario (wall following robot)

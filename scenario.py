@@ -1,16 +1,153 @@
+""" Implementation of functions classes relevant to a specific learning scenario.
+    This file implements those relevant to the wall following robot scenario.
+"""
+
 import numpy as np
 
+class Cost:
+    '''
+    Compute the exponentiated negative quadratic cost:
+
+        exp(-(x-z)^2 * w / 2)
+
+    Where:
+        x   state
+        z   target state
+        w   weight vector
+    '''
+    def __init__(self, w, z):
+        '''
+        Inputs
+            w   weight vector   (1 x S)
+            z   target state    (1 x S)
+        '''
+        self.w = w / 2.0
+        self.z = z
+
+    def sample(self, x):
+        '''
+        Inputs
+            x   states      (N x S)
+
+        Outputs
+            C   cost        (N x 1)
+        '''
+        if x.ndim == 1: x = x.reshape(-1, self.w.shape[1])
+
+        C = np.empty(x.shape[0])
+
+        vald = x[:, 0] > 0.1 # Not next to the wall
+        C[vald] = np.exp(-np.sum(np.abs(x[vald, :] - self.z) * self.w, 1))
+
+        vald = np.invert(vald) # Next to the wall
+        C[vald] = 0
+
+        return C
+
+class LowerPolicy:
+    '''
+    PID controller with some anti windup measures and with offset parameter.
+        - Anti windup prevents integral component from becoming too large.
+        - Offset parameter ensures that even if all weights are 0 there is some control output.
+    '''
+    def __init__(self, min, max, target, offset, maxI = 0, minI = 0, dt = 1):
+        '''
+        Array inputs:
+            target      (nO, )
+            offset      (nO, )
+        '''
+        self.min = min # Hard maximum and minimum
+        self.max = max
+
+        self.target = target # To compute error
+
+        self.init = False # Reset integral component and previous measurement
+
+        self.offset = offset # If all gains are 0, output is this
+
+        self.maxI = maxI # Prevent integral windup
+        self.minI = minI
+
+        self.dt = dt
+
+    def reset(self):
+        '''
+        Call this at the start of an episodeself.
+
+        Sets flag that will set to 0 integral component and reset previous
+        sample used to compute derivative component.
+        '''
+        self.init = False
+
+    def sample(self, W, X):
+        '''
+        Inputs:
+            W   policy weights                  (nW x N)
+            X   vector of states                (N x nO)
+
+        Outputs (N x 2)
+        '''
+        # Prevent errors later on when reshaping weights
+        assert W.shape[0] == 12, 'Wrong policy dimensions'
+
+        if X.ndim == 1: X = X.reshape(-1, 2)
+
+        # Weights
+        Kp = np.copy(W[0:4, :].reshape(2, 2, -1))
+        Ki = np.copy(W[4:8, :].reshape(2, 2, -1))
+        Kd = np.copy(W[8: , :].reshape(2, 2, -1))
+        K_p_d = np.concatenate((Kp, Kd), axis = 1)
+
+        # Error
+        e = self.target - X
+        oz = e[:, 0] >= 0
+        e[oz, 0] = np.log(e[oz, 0] + 1)
+        oz = np.invert(oz)
+        e[oz, 0] = np.log(-1.0 / (e[oz, 0] - 1))
+        e = e.T.reshape(2, 1, -1)
+
+        # If initialization is needed
+        if not self.init:
+            self.init = True
+            self.I = np.zeros((X.shape[0], 2)) # (N, 2)
+            self.prev_e = e
+
+        # Derivative error
+        de = (e - self.prev_e) / self.dt
+        e_de = np.concatenate((e, de))
+        self.prev_e = e
+
+        # Integral component
+        self.I += np.einsum('ijn,jkn->ikn', Ki, e * self.dt)[:, 0, :].T
+        self.I[self.I > self.maxI] = self.maxI
+        self.I[self.I < self.minI] = self.minI
+
+        # Compute output
+        u = np.einsum('ijn,jkn->ikn', K_p_d, e_de)[:, 0, :].T + self.offset + self.I
+        u[u > self.max] = self.max
+        u[u < self.min] = self.min
+
+        return u
+
 class Model:
+    '''
+    Dynamic model of a differential speed robot following a straight wall.
+    '''
     def __init__(self, dt, pol, cost, noise = False):
         self.dt = dt
-        self.pol = pol
-        self.cost = cost
-        self.noise = noise
+        self.pol = pol      # Lower-level policy
+        self.cost = cost    # Cost function
+        self.noise = noise  # Adds Gaussian noise to calculations
 
     def simulateRobot(self, M, H, x0, w):
         '''
-            x0 - (M x 2)
-            w  - (4 x N)
+        Simulate 'M' episodes with a horizon 'H'
+
+        Inputs:
+            M   number of episodes simulated
+            H   episode step-horizon
+            x0  initial condition               (M x nS)
+            w   lower-policy Weights            (nW x N)
         '''
         dt = self.dt
         pol = self.pol
@@ -71,13 +208,13 @@ class Model:
         indx4 = empty((M,), dtype = 'bool')
         indx5 = empty((M,), dtype = 'bool')
         indx6 = empty((M,), dtype = 'bool')
-        R = np.zeros((M,1))
+        R = np.zeros((M,))
         for t in xrange(H):
             # Control action to expected odometry ----------------------------------
             # u (M x 2) - not used afterwards
             # delta_l is arr1 - (M x 1) - used until model step
             # delta_r is arr2 - (M x 1) - used until model step
-            u = pol.sampleMat(w, x) * dt
+            u = pol.sample(w, x) * dt
             arr1 = u[:, 0].reshape(-1)
             arr2 = u[:, 1].reshape(-1)
             u = None # free memory for u
@@ -228,5 +365,33 @@ class Model:
             indxSp1 = None
 
             x = np.concatenate([arr1.reshape(-1,1), arr2.reshape(-1,1)], 1)
-            R += cost.sampleMat(x)
+            R += cost.sample(x)
         return R
+
+def sampleContext(N):
+    '''
+    Samples N random contexts.
+    '''
+    S = np.empty((N, 2))
+    S[:, 0] =  np.random.rand(N) * 50 + 150
+    S[:, 1] =  np.random.rand(N) * 0.5236 + 0.5236
+    return S
+
+def predictReward(mod, M, H, hipol):
+    '''
+    Perform exploration before policy update.
+
+    Inputs:
+        M       number of episodes to simulate
+        H       step-horizon of each episode
+        hipol   upper-level policy object used to draw lower-level parameters
+
+    Outputs:
+        R       rewards for each episode                        (M,  )
+        W       lower-level weights used for each episode       (M x nW)
+        F       context of each episode                         (M x nS)
+    '''
+    F = sampleContext(M)                    # Draw contexts
+    W = hipol.sample(F)                     # Draw lower-level parameters
+    R = mod.simulateRobot(M, H, F, W.T)     # Simulate dynamics and compute rewards
+    return R, W, F
