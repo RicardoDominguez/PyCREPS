@@ -4,10 +4,9 @@ import pdb
 import time
 from numpy.random import multivariate_normal as mvnrnd
 from cost import CostExpQuad
-from highpol import HighPol
 
-from policy import Proportional
 from policy import PID
+from cntxt import sampleContext
 
 
 def robotModel(odoL, odoR, theta):
@@ -223,16 +222,8 @@ class Scenario:
             d_wall  - Distance from robot to the wall
             d_theta - Angle of wall with respect to the robot
         '''
-        #delta_x, delta_y, delta_theta = robotModel(odoL, odoR, self.robot.theta)
         theta_s = self.robot.sensor_theta
         ang0 = theta_s + self.robot.theta - np.pi/2
-
-        # print 'm1 ' , m1
-        # print 'm2 ' , m2
-        # print 'x3 ' , delta_x
-        # print 'y3 ' , delta_y
-        # print 'dt ' , delta_theta
-        # print 'rt ' , self.robot.theta
 
         # Compute 4 known points
         x2 = m1 * np.cos(ang0)
@@ -257,7 +248,6 @@ class Scenario:
 
             if(a_2 > 1e-9 and b_2 > 1e-9 and c_2 > 1e-9):
                 theta_wall = np.arccos((a_2 + b_2 - c_2)/(2 * np.sqrt(a_2) * np.sqrt(b_2)))
-                #print a_2, b_2, c_2
                 if xp > xi:
                     theta_wall = -theta_wall
             else:
@@ -316,7 +306,7 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
     target = np.array([10, 0]).reshape(1, -1)
     cost = CostExpQuad(Kcost, target)
     R = 0
-
+    pol.reset()
     scn.initScenario(x0)
     x = x0
     if plot: scn.plot(False)
@@ -339,12 +329,11 @@ def performanceMetric(scn, x0, T, pol, w, plot = False):
     #print R
     return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
 
-def validatePolicy(scn, x0s, T, pol, hpol, verbose = True):
+def validatePolicy(scn, N, T, pol, hpol, verbose = True):
     '''
     x0s is the set of initial states to test, with (N, 2), where N is the numer of tests
     '''
-    assert x0s.shape[1] == 2 and x0s.shape[0] > 0, "Invalid shape, should be (N, 2)"
-    N = x0s.shape[0]
+    x0s = sampleContext(N)
     a_collision = []
     a_time_to_distance = []
     a_max_overshoot = []
@@ -423,12 +412,6 @@ def compareWeights(scn, x0, T, pol, w1, w2):
     simulateResults(scn, x0, T, pol, w1, id = 1)
     simulateResults(scn, x0, T, pol, w2, id = 2)
     plt.show()
-
-def sampleContext(N):
-    S = np.empty((N, 2))
-    S[:, 0] =  np.random.rand(N) * 170 + 50
-    S[:, 1] =  np.random.rand(N) * 0.87 + 0.5236
-    return S
 
 if __name__ == '__main__':
     # scn = Scenario(0.1)

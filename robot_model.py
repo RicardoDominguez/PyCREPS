@@ -1,10 +1,6 @@
 import numpy as np
-import pdb
-from numpy.random import multivariate_normal as mvnrnd
-from policy import Proportional
-from cost import CostExpQuad
 
-class OptMod:
+class Model:
     def __init__(self, dt, pol, cost, noise = False):
         self.dt = dt
         self.pol = pol
@@ -232,39 +228,5 @@ class OptMod:
             indxSp1 = None
 
             x = np.concatenate([arr1.reshape(-1,1), arr2.reshape(-1,1)], 1)
-            #pdb.set_trace()
             R += cost.sampleMat(x)
-            #print x[0, :]
-            #print R[0]
         return R
-
-if __name__ == '__main__':
-    M = 100
-    H = 1000
-    dt = 0.1
-
-    x_mu = np.array([180, np.pi/4]).reshape(-1)
-    x_sigma = np.eye(x_mu.shape[0]) * [50, np.pi/10]
-    x0 = mvnrnd(x_mu, x_sigma, M)
-
-    hpol_mu =  np.array([-2, 100, 2, -100]).reshape(-1)
-    hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20]
-    w = mvnrnd(hpol_mu, hpol_sigma, M).T
-
-    target = np.array([10, 0]).reshape(-1)
-    offset = np.array([150, 150]).reshape(-1)
-    pol = Proportional(-324, 324, target, offset)
-
-    Kcost = np.array([0.005, 100]).reshape(1, -1)
-    target = np.array([10, 0]).reshape(1, -1)
-    cost = CostExpQuad(Kcost, target)
-
-    x0[0, :] = np.array([130, np.pi/3])
-    w[:, 0]  = np.array([-6.36, 95.62, 18.9, -104.17]).reshape(-1)
-    x0[1, :] = np.array([240, np.pi/3])
-    w[:, 1]  = np.array([-12.44, 147.56, -4.77, -106.8]).reshape(-1)
-
-    print 'Initializing....'
-    mod = OptMod(dt, pol, cost)
-    print 'Done...'
-    mod.simulateRobot(M, H, x0, w)

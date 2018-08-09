@@ -1,137 +1,57 @@
 # GPREPS dual function minimizer
 import numpy as np
-import math
-import scipy.optimize as opt
 from scipy.misc import logsumexp
-import matplotlib.pyplot as plt
 from scipy.optimize import fmin_l_bfgs_b
 import pdb
 
-def fnc(x, W, R, F, eps):
+def computeSampleWeighting(W, R, F, eps):
     '''
-    Implementation of the GPREPS dual function
-
     Inputs:
-        x       (eta, theta)        (1 x 1+S)
-        w       Weights             (N x W)
-        R       Returns             (N x 1)
-        F       Features            (N x S)
-        eps     Epsilon             (1 x 1)
+        w       Weight  dataset matrix  (N x W)
+        R       Return  dataset vector  (N ,  )
+        F       Feature dataset matrix  (N x S)
+        eps     Epsilon                 (1 x 1)
 
     Outputs:
-        fval    value of the dual function at x         (1 x 1)
+        p       policy update weights   (N x 1)
     '''
-    eta = x[0]
-    theta = np.array(x[1:]).reshape(-1, 1) # (S x 1)
-
-    mean_f = np.mean(F, 0).reshape(-1, 1) # (S x 1)
-    err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
-    log_summa = logsumexp(err / eta, b = 1.0 / W.shape[0])
-
-    fval = (eta * log_summa) + (eta * eps) + (np.dot(theta.T, mean_f))
-    return fval
-
-def fnc_der(x, W, R, F, eps):
-    '''
-    Computes the derivative of the GPREPS dual function
-
-    Inputs:
-        x       (eta, theta)        (1 x 1+S)
-        w       Weights             (N x W)
-        R       Returns             (N x 1)
-        F       Features            (N x S)
-        eps     Epsilon             (1 x 1)
-
-    Outputs:
-        grad    gradient of the dual function at x      (1 x 1+S)
-    '''
-    eta = x[0]
-    theta = np.array(x[1:]).reshape(-1, 1) # (S x 1)
-
-    mean_f = np.mean(F, 0).reshape(-1, 1) # (S x 1)
-    err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
-    exp_arg = err / eta
-    log_summa = logsumexp(exp_arg, b = 1.0 / W.shape[0])
-
-    zeta_safe = np.exp(exp_arg - exp_arg.max())
-    sum_zeta_safe = zeta_safe.sum()
-    base = np.sum(zeta_safe * err) / (eta * sum_zeta_safe)
-    d_eta = eps + log_summa - base
-
-    d_theta = mean_f - (np.sum(zeta_safe*F, 0).reshape(-1,1) / sum_zeta_safe) # (S x 1)
-
-    grad = np.append(d_eta, d_theta).reshape(-1, 1) # (1 x S + 1)
-    return grad
-
-class DualFnc:
-    def minimize(self, W, R, F, eps):
-        '''
-        Minimize the dual function using L-BFGS-B
-        '''
-        n_theta = F.shape[1]
-
-        # Initial point
-        eta0 = 1
-        theta0 = np.zeros((1, n_theta))
-        x0 = np.append(eta0, theta0)
-
-        # Eta > 0
-        min_eta = 1e-299 # Close to 0
-        eta_bds = (min_eta, None)
-        theta_bds = tuple([(None, None) for i in xrange(n_theta)])
-        bds = tuple([eta_bds]) + theta_bds
-        args = (W, R, F, eps)
-
-        # x, f, d = fmin_l_bfgs_b(fnc, x0, args = args, fprime = fnc_der, bounds = bds, disp = False)
-        #
-        # if d == 0:
-        #     return x
-        # else:
-        #     print 'd', d
-        #     print 'Maximum err', np.max(R)
-        #     #print res.message
-        #     plt.plot(R)
-        #     plt.show()
-        #     raise Exception('Minimizer did not converge')
-
-        res = opt.minimize(fnc, x0, args, 'L-BFGS-B', fnc_der, bounds = bds, options={'disp': False})
-        if res.success:
-            return res.x
-        else:
-            print 'Maximum err', np.max(R)
-            print res.message
-            plt.plot(R)
-            plt.show()
-            raise Exception('Minimizer did not converge')
-
-    def sampleWeighting(self, x, R, F):
-        '''
-        Compute the sample weighting for weighted ML update.
-        '''
+    # ----------------------------------------------------------------------
+    # Minimize dual function using L-BFGS-B
+    # ----------------------------------------------------------------------
+    def dual_fnc(x): # Dual function with analyitical gradients
         eta = x[0]
         theta = x[1:]
-        err = (R - np.sum(theta.T * F, 1).reshape(-1, 1)) / eta # (N x 1)
 
-        with np.errstate(over = 'raise'):
-            try:
-                p = np.exp(err - err.max())
-                p = p / p.sum()
-            except:
-                print 'Maximum reward is ', np.max(err)
-                print 'Computed eta is ', eta
-                raise Exception('Overflow error, rewards too large...')
+        F_mean = F.mean(0)
+        R_over_eta = R - theta.dot(F.T) / eta
+        log_sum_exp = logsumexp(R_over_eta, b = 1.0 / W.shape[0])
+        Z = np.exp(R_over_eta - R_over_eta.max())
+        Z_sum = Z.sum()
 
-        #plt.plot(p)
-        #plt.show()
-        return p # (N x 1)
+        f = eta * (eps + log_sum_exp) + theta.T.dot(F_mean)
+        d_eta = eps + log_sum_exp - (Z.dot(R_over_eta) / Z_sum)
+        d_theta = F_mean - (Z.dot(F) / Z_sum)
 
-    def computeSampleWeighting(self, W, R, F, eps):
-        '''
-        Inputs:
-            w       Weight  dataset matrix  (N x W)
-            R       Return  dataset vector  (N x 1)
-            F       Feature dataset matrix  (N x S)
-            eps     Epsilon                 (1 x 1)
-        '''
-        x = self.minimize(W, R, F, eps)
-        return self.sampleWeighting(x, R, F)
+        return f, np.append(d_eta, d_theta)
+
+    # Initial point
+    x0 = [1] + [1] * F.shape[1]
+
+    # Bounds
+    min_eta = 1e-10
+    bds = np.vstack(([[min_eta, None]], np.tile(None, (F.shape[1], 2))))
+
+    # Minimize using L-BFGS-B algorithm
+    x = fmin_l_bfgs_b(dual_fnc, x0, approx_grad=None, bounds=bds)[0]
+
+    # ----------------------------------------------------------------------
+    # Determine weights of individual samples for policy update
+    # ----------------------------------------------------------------------
+    eta = x[0]
+    theta = x[1:]
+
+    R_baseline_eta = (R - theta.dot(F.T)) / eta
+    p = np.exp(R_baseline_eta - R_baseline_eta.max())
+    p /= p.sum()
+
+    return p

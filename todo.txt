@@ -1,4 +1,0 @@
-Experiment eta
-Experiment more responsive cost function
-Experiment hpol sigma
-Experiment policy cutoff
