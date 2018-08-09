@@ -4,6 +4,8 @@ import math
 import scipy.optimize as opt
 from scipy.misc import logsumexp
 import matplotlib.pyplot as plt
+from scipy.optimize import fmin_l_bfgs_b
+import pdb
 
 def fnc(x, W, R, F, eps):
     '''
@@ -48,13 +50,15 @@ def fnc_der(x, W, R, F, eps):
 
     mean_f = np.mean(F, 0).reshape(-1, 1) # (S x 1)
     err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
-    log_summa = logsumexp(err / eta, b = 1.0 / W.shape[0])
+    exp_arg = err / eta
+    log_summa = logsumexp(exp_arg, b = 1.0 / W.shape[0])
 
-    base = np.exp(logsumexp(err / eta, b = err) - logsumexp(err / eta) - np.log(eta)) # Change, its stupid
+    zeta_safe = np.exp(exp_arg - exp_arg.max())
+    sum_zeta_safe = zeta_safe.sum()
+    base = np.sum(zeta_safe * err) / (eta * sum_zeta_safe)
     d_eta = eps + log_summa - base
 
-    #d_theta = mean_f - (np.sum(zeta*F, 0).reshape(-1,1) / float(s_zeta)) # (S x 1)
-    d_theta = np.zeros(mean_f.shape) #
+    d_theta = mean_f - (np.sum(zeta_safe*F, 0).reshape(-1,1) / sum_zeta_safe) # (S x 1)
 
     grad = np.append(d_eta, d_theta).reshape(-1, 1) # (1 x S + 1)
     return grad
@@ -76,10 +80,21 @@ class DualFnc:
         eta_bds = (min_eta, None)
         theta_bds = tuple([(None, None) for i in xrange(n_theta)])
         bds = tuple([eta_bds]) + theta_bds
-
         args = (W, R, F, eps)
-        res = opt.minimize(fnc, x0, args, 'L-BFGS-B', fnc_der, bounds = bds, options={'disp': False})
 
+        # x, f, d = fmin_l_bfgs_b(fnc, x0, args = args, fprime = fnc_der, bounds = bds, disp = False)
+        #
+        # if d == 0:
+        #     return x
+        # else:
+        #     print 'd', d
+        #     print 'Maximum err', np.max(R)
+        #     #print res.message
+        #     plt.plot(R)
+        #     plt.show()
+        #     raise Exception('Minimizer did not converge')
+
+        res = opt.minimize(fnc, x0, args, 'L-BFGS-B', fnc_der, bounds = bds, options={'disp': False})
         if res.success:
             return res.x
         else:
@@ -95,11 +110,12 @@ class DualFnc:
         '''
         eta = x[0]
         theta = x[1:]
-        err = R - np.sum(theta.T * F, 1).reshape(-1, 1) # (N x 1)
+        err = (R - np.sum(theta.T * F, 1).reshape(-1, 1)) / eta # (N x 1)
 
         with np.errstate(over = 'raise'):
             try:
-                p = np.exp(err / eta)
+                p = np.exp(err - err.max())
+                p = p / p.sum()
             except:
                 print 'Maximum reward is ', np.max(err)
                 print 'Computed eta is ', eta
