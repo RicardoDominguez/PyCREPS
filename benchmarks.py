@@ -1,16 +1,18 @@
+""" Includes varius functions to measure the performance of the lower-level
+    policy within the wall following robot environment.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb
-import time
-from numpy.random import multivariate_normal as mvnrnd
-from cost import CostExpQuad
 
-from policy import PID
-from cntxt import sampleContext
-
+from scenario import Cost
+from scenario import LowerPolicy
+from scenario import sampleContext
 
 def robotModel(odoL, odoR, theta):
     '''
+    Dynamic model for a differential drive robot.
+
     Inputs:
         odoL  - odometry left wheel
         odoR  - odometry right wheel
@@ -43,12 +45,15 @@ def robotModel(odoL, odoR, theta):
     return delta_x, delta_y, delta_theta
 
 class Robot:
+    '''
+    Robot class contains information of the robot state (x, y, theta).
+    '''
     def __init__(self):
         self.x = 0
         self.y = 0
         self.theta = 0
         self.sensor_theta = 18 * np.pi / 180 # 18 deg
-        self. m = 0
+        self.m = 0
 
     def resetPosition(self):
         # Global frame of reference is robot initial position, pointing to the
@@ -58,19 +63,19 @@ class Robot:
         self.theta = np.pi / 2
 
     def plot(self, size_dot = 1):
-        rx = self.x
-        ry = self.y
-        plt.plot(rx, ry, 'bo', markersize = size_dot) # Sensor location
+        # Compute position of body of robot (as a square)
         rt = self.theta - np.pi / 2
-        l = 280
-        d = 300
-        #robo_pos = np.array([[0, -l, -l, 0, 0], [0, 0, -d, -d, 0]])
-        robo_pos = np.array([[0, 0, 0], [0, -d, 0]])
+        robo_pos = np.array([[0, 0, 0], [0, -300, 0]]) # [[0, 0, 0], [0, -d, 0]]
         trans_mat = np.array([[np.cos(rt), -np.sin(rt)], [np.sin(rt), np.cos(rt)]])
         robo_trans = np.matmul(trans_mat, robo_pos)
-        plt.plot(robo_trans[0, :] + rx, robo_trans[1, :] + ry, 'b') # Robot body
+
+        plt.plot(self.x, self.y, 'bo', markersize = size_dot) # Plot sensor location
+        plt.plot(robo_trans[0, :] + self.x, robo_trans[1, :] + self.y, 'b') # Plot robot body
 
 class Wall:
+    '''
+    Wall class contains information of the wall state (x, y, theta).
+    '''
     def __init__(self):
         self.x = 0
         self.y = 0
@@ -79,8 +84,8 @@ class Wall:
     def setPosition(self, m, theta, theta_sensor):
         '''
         Inputs
-            m     - distance from robot to wall as measured by TOF sensor
-            theta - angle of the robot with respect to wall
+            m       distance from robot to wall as measured by TOF sensor
+            theta   angle of the robot with respect to wall
         '''
         self.x = m * np.cos(theta_sensor)
         self.y = m * np.sin(theta_sensor)
@@ -94,7 +99,10 @@ class Wall:
         y2 = self.y + scale_wall * np.sin(np.pi + self.theta)
         plt.plot([x1, x2], [y1, y2], 'g')
 
-class Scenario:
+class Environment:
+    '''
+    Environment simulating a differential drive robot approaching a straight wall.
+    '''
     def __init__(self, dt = 0.02, noise = True):
         self.robot = Robot()
         self.wall = Wall()
@@ -126,18 +134,22 @@ class Scenario:
         '''
         odoL = u[0] * self.dt * 12
         odoR = u[1] * self.dt * 12
-        delta_x, delta_y, delta_theta = self.stepMotors(odoL, odoR) # New robot position
-        valid_sample, r_m2, ob_m2 = self.sampleTOFSensor() # New tof sample
-        d_wall, theta_wall = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta) # New state estimation
 
-        d_r, t_r = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta) # New state estimation
+        # New robot position
+        delta_x, delta_y, delta_theta = self.stepMotors(odoL, odoR)
 
+        # New ToF sample
+        valid_sample, r_m2, ob_m2 = self.sampleTOFSensor()
+
+        # Robot observed and real state
+        observed_dist, observed_theta = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta)
+        real_dist, real_theta = self.computeDistanceAngle(self.robot.m, ob_m2, delta_x, delta_y, delta_theta)
         self.robot.m = ob_m2
-        ob_x = np.array([d_wall, theta_wall]).reshape(-1)
 
-        r_x = np.array([d_r, t_r]).reshape(-1)
-
-        return ob_x, r_x
+        # Return both observed and real state
+        observed_x = np.array([observed_dist, observed_theta]).reshape(-1)
+        real_x     = np.array([real_dist, real_theta]).reshape(-1)
+        return observed_x, real_x
 
     def stepMotors(self, odoL, odoR):
         '''
@@ -182,9 +194,12 @@ class Scenario:
             valid - whether the robot would have returned a valid measurement
             m     - distance measured by sensor (255 for invalid)
         '''
+        # Interception of wall and sensor line of action
         x_i = -(self.robot.y - self.wall.y - self.robot.x*np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) + self.wall.x*np.tan(self.wall.theta))/(np.tan(self.robot.theta - np.pi / 2 + self.robot.sensor_theta) - np.tan(self.wall.theta))
         y_i = np.tan(self.robot.sensor_theta + self.robot.theta - np.pi / 2) * (x_i - self.robot.x) + self.robot.y
-        o_abs = np.remainder(self.robot.sensor_theta + self.robot.theta - np.pi / 2 + 100000*np.pi, 2*np.pi)
+
+        # Cehck if measurement is valid
+        o_abs = np.remainder(abs(self.robot.sensor_theta + self.robot.theta - np.pi / 2), 2*np.pi)
         if (o_abs >= 0) and (o_abs <= np.pi / 2):
             valid = ((x_i - self.robot.x) >= 0) and ((y_i - self.robot.y) >= 0)
         elif (o_abs >= np.pi/2) and (o_abs <= np.pi):
@@ -195,20 +210,24 @@ class Scenario:
             valid = ((x_i - self.robot.x) >= 0) and ((y_i - self.robot.y) <= 0)
 
         if valid:
+            # Distance to wall
             m = np.sqrt((self.robot.x - x_i)**2 + (self.robot.y - y_i)**2)
-            if self.noise:
-                ob_m = m + (np.random.rand() - 0.5) * 4
-            else:
-                ob_m = np.copy(m)
 
+            # Add noise
+            if self.noise:
+                observed_m = m + (np.random.rand() - 0.5) * 4
+            else:
+                observed_m = np.copy(m)
+
+            # Sensor out of range
             if m > 255:
                 valid = False
                 m = 255
         else:
             m = 255
-            ob_m = 255
+            observed_m = 255
 
-        return valid, m, ob_m #round(m), round(ob_m) # Measurements can only be integers
+        return valid, m, observed_m
 
     def computeDistanceAngle(self, m1, m2, delta_x, delta_y, delta_theta):
         '''
@@ -276,197 +295,185 @@ class Scenario:
             else:
                 plt.plot([self.robot.x, self.robot.x + m * np.cos(self.robot.theta + self.robot.sensor_theta - np.pi/2)], [self.robot.y, self.robot.y + m * np.sin(self.robot.theta + self.robot.sensor_theta - np.pi/2)], 'k')
 
+        # Pause execution
         if interactive:
             plt.draw()
             plt.pause(0.001)
             raw_input("Press [enter] to continue.")
 
-def simulateStep(scn, x0, T, pol, w):
-    scn.initScenario(x0)
-    scn.plot(True)
+def simulateStepByStep(env, x0, T, pol, w):
+    '''
+    Simulate and plot environment step by step
+    '''
+    env.initScenario(x0)
+    env.plot(True)
+
+    pol.reset()
+
     x = x0
     for t in range(T):
-        u = pol.sample(w, x)
+        u = pol.sample(w, x)[0]
+        x, rx = env.step(u)
+        env.plot(True)
         print 'Distance ', x[0]
         print 'Computed angle ', x[1] * 180 / np.pi
         print 'Wheel speed ', u
-        x, rx = scn.step(u)
-        scn.plot(True)
-        # print 'Real angle ', (scn.wall.theta - scn.robot.theta) * 180 / np.pi
+
     plt.show()
 
-def performanceMetric(scn, x0, T, pol, w, plot = False):
+def performanceMetric(env, x0, T, pol, w, plot = False):
+    '''
+    Simulate T rollouts and compute:
+        - Whether the robot collisioned with the wall
+        - Whether the target distance was achieved
+        - The time taken to reach the target distance
+        - The maximum overshoot from the target distance
+        - Array with the distance error throughout the simulation
+        - Array with the angle error throughout the simulation
+    '''
+    # Varibles
     dist_errors = []
     ang_errors = []
     max_overshoot = 0
-    time_to_distance = -1
+    time_to_distance = 0
+    reached_target = False
     collision = False
 
-    Kcost = np.array([0.005, 100]).reshape(1, -1)
-    target = np.array([10, 0]).reshape(1, -1)
-    cost = CostExpQuad(Kcost, target)
-    R = 0
+    env.initScenario(x0)
+    if plot: env.plot(False)
+
     pol.reset()
-    scn.initScenario(x0)
+
     x = x0
-    if plot: scn.plot(False)
     for t in range(T):
-        u = pol.sample(w, x)
-        x, rx = scn.step(u)
-        if plot: scn.plot(False)
+        u = pol.sample(w, x)[0]
+        x, rx = env.step(u)
+
+        if plot: env.plot(False)
+
+        # Compute relevant parameters when already past target distance
         if rx[0] <= pol.target[0]:
-            if time_to_distance == -1:
-                time_to_distance = t+1
+            reached_target = True
+
+            # Maximum observed overshoot
             if pol.target[0] - rx[0] > max_overshoot:
                 max_overshoot = pol.target[0] - x[0]
+
+            # Register collision (too close to wall within tolerance)
             if rx[0] < 0.1:
                 collision = True
-        if time_to_distance != -1:
+
+        # Reached target distance, log angle and distance error
+        if reached_target:
             ang_errors.append((pol.target[1] - rx[1])*180 / np.pi)
             dist_errors.append(pol.target[0] - rx[0])
-        #print x
-        R += cost.sample(rx)
-    #print R
-    return collision, time_to_distance, max_overshoot, dist_errors, ang_errors
+        else:
+            time_to_distance = t+1
 
-def validatePolicy(scn, N, T, pol, hpol, verbose = True):
+    return collision, reached_target, time_to_distance, max_overshoot, dist_errors, ang_errors
+
+def validatePolicy(N, T, dt, pol, hpol, verbose = True):
     '''
-    x0s is the set of initial states to test, with (N, 2), where N is the numer of tests
+    Validete the performance of the policy for N different contexts
     '''
-    x0s = sampleContext(N)
+    # Performance metrics
     a_collision = []
     a_time_to_distance = []
     a_max_overshoot = []
     n_collisions = 0;
     n_converge = 0;
+
+    # Contexts
+    x0s = sampleContext(N)
+
+    # Environment
+    env = Environment(dt, noise = False)
+
     for i in xrange(N):
         x0 = x0s[i, :]
-        w = hpol.contextMean(x0.reshape(1,-1))
-        collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(scn, x0, T, pol, w, plot = False)
+        w = hpol.mean(x0.reshape(1,-1))
+        collision, reached_target, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(env, x0, T, pol, w, plot = False)
+
         a_collision.append(collision)
+
         if verbose:
             print '-----------------------------------------------------------------'
             print 'Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi)
+
         if collision:
             if verbose: print 'COLLISION OCURRED'
             n_collisions += 1
         else:
             if verbose: print 'No collision ocurred'
+
             if time_to_distance != -1:
                 n_converge += 1
                 a_time_to_distance.append(time_to_distance)
                 a_max_overshoot.append(max_overshoot)
+
                 if verbose:
                     print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
-                    print 'Time to target distance (s): ', time_to_distance * scn.dt
+                    print 'Time to target distance (s): ', time_to_distance * env.dt
             else:
                 if verbose: print 'DID NOT ACHIEVE THE TARGET DISTANCE'
 
     print '\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2)
+
     if N - n_collisions != 0:
         print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
+
     if len(a_time_to_distance) > 0:
-        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance)*scn.dt, 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
+        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance)*env.dt, 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
         print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
 
+def simulateResults(env, x0, T, pol, w, id = 0):
+    # Get performance metrics
+    collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(env, x0, T, pol, w, plot = True)
 
-def simulateResults(scn, x0, T, pol, w, id = 0):
-    collision, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(scn, x0, T, pol, w, plot = True)
-
-    if id:
+    if id: # If multiple will be ploted
         plt.title('Weights ' + str(id) + ' trajectory')
     else:
         plt.title('Robot trajectory')
     plt.xlabel('x axis (mm)')
     plt.ylabel('y axis (mm)')
+
     print '\n\n------------------------------------------------------------'
     if id:
         print 'Simulation results (', str(id), '):'
     else:
         print 'Simulation results: '
+
     print '------------------------------------------------------------'
     print 'Collision: ', collision
     if time_to_distance == -1:
         print 'Target distance was not reached'
     else:
         print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
-        print 'Time to target distance (s): ', time_to_distance * scn.dt
+        print 'Time to target distance (s): ', time_to_distance * env.dt
 
-        time = np.linspace(time_to_distance * scn.dt, T * scn.dt, len(dist_errors)).tolist()
         plt.figure((id-1) * 2 + 2)
         plt.subplot(211)
         if id:
             plt.title('Weights ' + str(id) + ' metrics')
         else:
             plt.title('Metrics')
+
+        time = np.linspace(time_to_distance * env.dt, T * env.dt, len(dist_errors)).tolist()
         plt.plot(time, dist_errors)
         plt.ylabel('Distance error (mm)')
+
         plt.subplot(212)
         plt.plot(time, ang_errors)
         plt.ylabel('Angle error (deg)')
         plt.xlabel('Time (s)')
+
         if not id: plt.show()
     print '\n'
 
-def compareWeights(scn, x0, T, pol, w1, w2):
-    simulateResults(scn, x0, T, pol, w1, id = 1)
-    simulateResults(scn, x0, T, pol, w2, id = 2)
+def compareWeights(env, x0, T, pol, w1, w2):
+    '''
+    Compare the performance of two different controller weights for the same context
+    '''
+    simulateResults(env, x0, T, pol, w1, id = 1)
+    simulateResults(env, x0, T, pol, w2, id = 2)
     plt.show()
-
-if __name__ == '__main__':
-    # scn = Scenario(0.1)
-    # x0 = np.array([240, np.pi/3])
-    # scn.initScenario(x0)
-    # simulate(scn, x0)
-
-    scn = Scenario(0.1)
-    x0 = np.array([140, 52/180.0*np.pi])
-    target = np.array([10, 0]).reshape(-1)
-    offset = np.array([150, 150]).reshape(-1)
-    #pol = Proportional(-324, 324, target, offset)
-    dt = 0.02
-    minU = -324
-    maxU = 324
-    target = np.array([10, 0]).reshape(-1)
-    offset = np.array([150, 150]).reshape(-1)
-    #pol = Proportional(minU, maxU, target, offset)
-    pol = PID(minU, maxU, target, offset, maxI = 30, minI = -30, dt = dt)
-    w = np.array([-16.8, 248.63, -6.44, -100]).reshape(-1)
-    w2 = np.array([-10.5, 222.85, -0.0116, -110.8]).reshape(-1)
-    T = 1000
-
-    mu = np.load('pol_mu.npy')
-    A = np.load('pol_A.npy')
-    # mu = np.array([-43, 556, -27.66, -166, -4.45, -15.53, -7, -6, 0, 0, 0, 0])
-    # A = np.array([[-0.139, 15],[-0.455, 28.65],[-0.19, 28.3],[0.0927,-0.42],[-0.01,395],[-0.0043,286],[0.0078,0.47],[-0.0012,3.7],[0, 0],[0,0],[0,0],[0,0]])
-    hpol = HighPol(mu, np.zeros((12,12)), ns = 2)
-    hpol.A = A
-    w = hpol.contextMean(x0.reshape(1,-1))
-    # simulateStep(scn, x0, T, pol, w)
-    #x0s = sampleContext(100)
-    #validatePolicy(scn, x0s, T, pol, hpol, verbose = 1)
-
-    simulateStep(scn, x0, T, pol, w)
-    #x = performanceMetric(scn, x0, T, pol, w)
-    #compareWeights(scn, x0, T, pol, w, w2)
-    #x0s = np.array([[200, np.pi/3], [200, np.pi/6], [200, np.pi/4], [200, np.pi/3.5], [200, np.pi/5]])
-    #validatePolicy(scn, x0s, T, pol, w)
-    #simulateStep(scn, np.array([200, np.pi/4.5]), T, pol, w.reshape(-1))
-
-    # M = 100
-    # H = 300
-    # dt = 0.1
-    #
-    # x_mu = np.array([180, np.pi/4]).reshape(-1)
-    # x_sigma = np.eye(x_mu.shape[0]) * [50, np.pi/10]
-    # x0 = mvnrnd(x_mu, x_sigma, M)
-    #
-    # hpol_mu =  np.array([-2, 100, 2, -100]).reshape(-1)
-    # hpol_sigma = np.eye(hpol_mu.shape[0]) * [20, 200, 200, 20]
-    # w = mvnrnd(hpol_mu, hpol_sigma, M).T
-    #
-    # target = np.array([10, 0]).reshape(-1)
-    # offset = np.array([150, 150]).reshape(-1)
-    # pol = Proportional(-324, 324, target, offset)
-    #
-    # simulateRobot(M, H, x0, dt, w, pol)
