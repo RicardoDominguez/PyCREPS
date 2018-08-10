@@ -72,7 +72,7 @@ class LowerPolicy:
 
     def reset(self):
         '''
-        Call this at the start of an episodeself.
+        Call this at the start of an episode.
 
         Sets flag that will set to 0 integral component and reset previous
         sample used to compute derivative component.
