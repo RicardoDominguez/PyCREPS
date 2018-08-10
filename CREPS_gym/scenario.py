@@ -15,12 +15,6 @@ class LowerPolicy:
         '''
         self.target = target # To compute error
 
-    def reset(self):
-        '''
-        Call this at the start of an episode.
-        '''
-        self.init = False
-
     def sample(self, W, X):
         '''
         Inputs:
