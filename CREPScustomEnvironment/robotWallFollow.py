@@ -2,11 +2,15 @@
     policy for the particular scenario/environment of a wall folliwng robot.
 """
 
+# Allow import of CREPS.py module in upper directory
+import sys
+import os.path
+sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+
+# Imports needed
 import numpy as np
-
-from scenario import *
-from CREPS    import *
-
+from CREPS    import computeSampleWeighting, UpperPolicy
+from scenario import Cost, LowerPolicy, Model, predictReward # Scenario specific
 from benchmarks import validatePolicy
 
 # ------------------------------------------------------------------------------
