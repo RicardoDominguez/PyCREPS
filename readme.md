@@ -15,13 +15,75 @@ Contextual Policy Search allows to generalize policies to multiple contexts, whe
  * A lower policy __&pi;(u | x; w)__ which determines the action __u__ taken by the agent given its state __x__ and some parameters __w__.
  * An upper policy __&pi;(w | s)__  which determines the lower policy parameters __w__ given the context __s__.
 
-The file *CREPS.py* implements the upper policy as a linear-Gaussian model which is updated using weighted ML according to the contexts and rewards of the observed episodes.
+The file *CREPS.py* implements the upper policy as a linear-Gaussian model which is updated using weighted ML.
 
 All other elements of the Reinforcement Learning problem &mdash;environment dynamics, reward function and lower policy&mdash; must be implemented for your particular scenario as you consider best with only a few considerations in mind to ensure compatibility with the upper policy and policy update function. It is then very straightforward to put everything together, as illustrated in the next section.
 
 ## How to set up your own scenario
 
-## Examples
+The steps of the each policy iteration are:
+
+```
+1. Run M episodes, storing for each episode the lower policy parameters sampled,
+   the episode context and the episodic reward
+2. Compute the sample weights for policy update
+3. Update upper policy using the sample weights
+```
+
+Which in my examples I have implemented as:
+
+```
+R, W, F = predictReward(env, M, hpol, pol) # 1
+p = computeSampleWeighting(R, F, eps)      # 2
+hpol.update(W, F, p)                       # 3
+```
+where ``env`` is a class with the environment dynamics, ``hpol`` the upper policy and ``pol`` the lower level policy.
+
+The methods for steps 2 and 3 are implemented in *CREPS.py*, thus you only need to worry about step 1, which __MUST__ return the following numpy arrays:
+ * ``R`` - reward for each episode, *shape (M,)*
+ * ``W`` - lower policy weights used for each episode, *shape (M x number of lower policy weights)*
+ * ``F`` - context of each episode. *shape (M x number of context parameters)*
+
+Imagine your scenario is an OpenAI Gym environment, an intuitive implementation of ``predictReward`` would be:
+
+```
+def predictReward(env, M, hipol, pol):
+  for rollout in xrange(M):
+      s = env.reset()                    # Sample context
+      w = hipol.sample(s.reshape(1, -1)) # Sample lower-policy weights
+
+      W[rollout, :] = w
+      F[rollout, :] = s
+
+      done = False
+      x = s
+      while not done:
+          u = pol.sample(w.T, x)          # Sample action from lower policy
+          x, r, done, info = env.step(u)
+          R[rollout] += r                 # Update episode reward
+
+  return R, W, F
+  ```
+
+For a full example of CREPS being used to solve the CartPole OpenAI environment check /CREPS_gym.
+
+For a full example of how you could use CREPS for your own Reinforcement Learning problem check /CREPS_customEnvironment, where a differential drive robot learns to follow a straight wall using a PID controller (here the context is the starting distance from the wall and initial angle with respect to the wall).
+
+Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. GPREPS_gym offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment.
+
+In all the examples provided there are three files:
+ * Script called to train the policy for the specific scenario (CREPS_gym/cartPoleEnv.py, CREPS_customEnvironment/robotWallFollow.py, GPREPS_gym/cartPoleEnv.py)
+ * File containing functions/classes which implement the environment dynamics, reward function and lower policy (scenario.py).
+ * File with some functions to benchmark the performance of the algorithm at each policy update (benchmarks.py)
+
+## Dependencies
+ * ``numpy``
+ * ``scipy``
+
+
+ For the examples:
+ * ```gym```
+ * ```matplotlib```
 
 ## Contributing...
 
