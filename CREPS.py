@@ -11,7 +11,6 @@ def computeSampleWeighting(R, F, eps):
     to the set of features and rewards found by interacting with the model.
 
     Inputs:
-        w       Weight  dataset matrix  (N x W)
         R       Return  dataset vector  (N ,  )
         F       Feature dataset matrix  (N x nS)
         eps     Epsilon                 (1 x 1)
@@ -115,7 +114,6 @@ class UpperPolicy:
 
         Inputs:
             w   lower-level policy weights      (N x W)
-            R   episodic rewards                (N,   )
             F   features                        (N x nS)
             p   sample Weights                  (N x 1)
         '''
