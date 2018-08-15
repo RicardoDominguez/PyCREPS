@@ -2,7 +2,14 @@
 
 Python implementation of Contextual Relative Entropy Policy Search for Reinforcement Learning problems.
 
-Relevant papers:
+- [Relevant papers](#relevant-papers)
+- [Implementation](#implementation)
+- [How to set up your own scenario](#how-to-set-up-your-own-scenario)
+- [Examples](#examples)
+- [Dependencies](#dependencies)
+- [Contributing](#contributing)
+
+## Relevant papers
  * Kupcsik, A. G., Deisenroth, M. P., Peters, J., & Neumann, G. (2013, July). Data-efficient generalization of robot skills with contextual policy search. In Proceedings of the 27th AAAI Conference on Artificial Intelligence, AAAI 2013 (pp. 1401-1407). [[pdf]](https://www.aaai.org/ocs/index.php/AAAI/AAAI13/paper/viewFile/6322/6842)
  * Peters, J., Mülling, K., & Altun, Y. (2010, July). Relative Entropy Policy Search. In AAAI (pp. 1607-1612).[[pdf]](http://www.aaai.org/ocs/index.php/AAAI/AAAI10/paper/viewFile/1851/2264)
  * Daniel, C., Neumann, G., & Peters, J. (2012, March). Hierarchical relative entropy policy search. In Artificial Intelligence and Statistics (pp. 273-281). [[pdf]](http://www.jmlr.org/proceedings/papers/v22/daniel12/daniel12.pdf)
@@ -15,7 +22,7 @@ Contextual Policy Search allows to generalize policies to multiple contexts, whe
  * A lower policy __&pi;(u | x; w)__ which determines the action __u__ taken by the agent given its state __x__ and some parameters __w__.
  * An upper policy __&pi;(w | s)__  which determines the lower policy parameters __w__ given the context __s__.
 
-The file *CREPS.py* implements the upper policy as a linear-Gaussian model which is updated using weighted ML.
+The file [*CREPS.py*](CREPS.py) implements the upper policy as a linear-Gaussian model which is updated using weighted ML.
 
 All other elements of the Reinforcement Learning problem &mdash;environment dynamics, reward function and lower policy&mdash; must be implemented for your particular scenario as you consider best with only a few considerations in mind to ensure compatibility with the upper policy and policy update function. It is then very straightforward to put everything together, as illustrated in the next section.
 
@@ -39,7 +46,7 @@ hpol.update(W, F, p)                       # 3
 ```
 where ``env`` is a class with the environment dynamics, ``hpol`` the upper policy and ``pol`` the lower level policy.
 
-The methods for steps 2 and 3 are implemented in *CREPS.py*, thus you only need to worry about step 1, which __MUST__ return the following numpy arrays:
+The methods for steps 2 and 3 are implemented in [*CREPS.py*](CREPS.py), thus you only need to worry about step 1, which __MUST__ return the following numpy arrays:
  * ``R`` - reward for each episode, *shape (M,)*
  * ``W`` - lower policy weights used for each episode, *shape (M x number of lower policy weights)*
  * ``F`` - context of each episode. *shape (M x number of context parameters)*
@@ -65,16 +72,28 @@ def predictReward(env, M, hipol, pol):
   return R, W, F
   ```
 
-For a full example of CREPS being used to solve the CartPole OpenAI environment check /CREPS_gym.
-
-For a full example of how you could use CREPS for your own Reinforcement Learning problem check /CREPS_customEnvironment, where a differential drive robot learns to follow a straight wall using a PID controller (here the context is the starting distance from the wall and initial angle with respect to the wall).
-
-Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. GPREPS_gym offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment.
+## Examples
 
 In all the examples provided there are three files:
  * Script called to train the policy for the specific scenario (CREPS_gym/cartPoleEnv.py, CREPS_customEnvironment/robotWallFollow.py, GPREPS_gym/cartPoleEnv.py)
  * File containing functions/classes which implement the environment dynamics, reward function and lower policy (scenario.py).
  * File with some functions to benchmark the performance of the algorithm at each policy update (benchmarks.py)
+
+For a full example of CREPS being used to solve the CartPole OpenAI environment check [/CREPS_gym](/CREPS_gym). To run it use
+```
+$ python CREPS_gym/cartPoleEnv.py
+```
+
+For a full example of how you could use CREPS for your own Reinforcement Learning problem check [/CREPS_customEnvironment](/CREPS_customEnvironment), where a differential drive robot learns to follow a straight wall using a PID controller (here the context is the starting distance from the wall and initial angle with respect to the wall). To run it use
+```
+$ python CREPS_customEnvironment/robotWallFollow.py
+```
+
+Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. [/GPREPS_gym](/GPREPS_gym) offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment. To run it use
+```
+$ python GPREPS_gym/cartPoleEnv.py
+```
+
 
 ## Dependencies
  * ``numpy``
@@ -85,6 +104,6 @@ In all the examples provided there are three files:
  * ```gym```
  * ```matplotlib```
 
-## Contributing...
+## Contributing
 
 All enhancements are welcome. Feel free to give suggestions or raise issues.
