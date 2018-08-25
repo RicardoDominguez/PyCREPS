@@ -21,10 +21,10 @@ def bench(env, hipol, pol, verbose = False):
     solved = (R == 200).all()
 
     if verbose:
-        print 'Mean reward', muR
+        print('Mean reward', muR)
         if solved:
-            print 'Solved!'
+            print('Solved!')
         else:
-            print 'Not solved.'
+            print('Not solved.')
 
     return muR, solved

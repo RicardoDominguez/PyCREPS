@@ -51,8 +51,8 @@ env.seed(10)
 np.random.seed(4)
 
 # Benchmark of initial policy
-print '--------------------------------------'
-print 'Initial policy...'
+print('--------------------------------------')
+print('Initial policy...')
 muR, solved = bench(env, hpol, pol, True)
 
 # ------------------------------------------------------------------------------
@@ -69,14 +69,14 @@ for j in xrange(NinitRolls):
 # ------------------------------------------------------------------------------
 k = 1
 while not solved:
-    print '--------------------------------------'
-    print 'Run', k
+    print('--------------------------------------')
+    print('Run', k)
     k += 1
 
-    print 'Fitting GP model...'
+    print('Fitting GP model...')
     gp.fit(X, Y)
 
-    print 'Simulating rollouts...'
+    print('Simulating rollouts...')
     R, W, F = predictReward(M, hpol, pol, gp)
     p = computeSampleWeighting(R, F, eps)
     hpol.update(W, F, p)

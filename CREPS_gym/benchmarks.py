@@ -7,7 +7,7 @@ def bench(env, hipol, pol, verbose = False):
     '''
     N = 100
     R = np.zeros(N)
-    for rollout in xrange(N):
+    for rollout in range(N):
         x = env.reset()                    # Sample context
         w = hipol.mean(x.reshape(1, -1)).T # Sample lower-policy weights
 
@@ -21,10 +21,10 @@ def bench(env, hipol, pol, verbose = False):
     solved = (R == 200).all()
 
     if verbose:
-        print 'Mean reward', muR
+        print('Mean reward', muR)
         if solved:
-            print 'Solved!'
+            print('Solved!')
         else:
-            print 'Not solved.'
+            print('Not solved.')
 
     return muR, solved

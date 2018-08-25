@@ -24,15 +24,17 @@ M = 100            # Number of rollouts per policy iteration
 # Scenario parameters
 # -----------------------------------------------------------------------------
 target = np.zeros(4) # Target state for policy
-upper_mean  = np.array([1, 0, 1, 0]) # Initial upper-policy parameters
-upper_sigma = np.eye(upper_mean.shape[0]) * [.1, .1, .1, .1]
+upper_a  = np.array([[1., 0., 1., 0.]]).T # Initial upper-policy parameters
+upper_A = np.zeros((4, 4))
+upper_sigma = np.eye(4) * [.1, .1, .1, .1]
 
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes
 # ------------------------------------------------------------------------------
-pol     = LowerPolicy(target)                           # Lower-policy
-hpol    = UpperPolicy(upper_mean, upper_sigma, nS = 4)  # Upper-policy
-env     = gym.make('CartPole-v0')
+pol = LowerPolicy(target)                           # Lower-policy
+hpol = UpperPolicy(4)  # Upper-policy
+hpol.set_parameters(upper_a, upper_A, upper_sigma)
+env = gym.make('CartPole-v0')
 
 # ------------------------------------------------------------------------------
 # Allow consistent results
@@ -41,8 +43,8 @@ env.seed(10)
 np.random.seed(0)
 
 # Benchmark of initial policy
-print '--------------------------------------'
-print 'Initial policy...'
+print('--------------------------------------')
+print('Initial policy...')
 muR, solved = bench(env, hpol, pol, True)
 
 # ------------------------------------------------------------------------------
@@ -50,8 +52,8 @@ muR, solved = bench(env, hpol, pol, True)
 # ------------------------------------------------------------------------------
 k = 0
 while not solved:
-    print '--------------------------------------'
-    print 'Run', k+1
+    print('--------------------------------------')
+    print('Run', k+1)
     k += 1
 
     R, W, F = predictReward(env, M, hpol, pol)
