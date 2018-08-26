@@ -34,6 +34,12 @@ pol     = LowerPolicy(target)                           # Lower-policy
 hpol    = UpperPolicy(upper_mean, upper_sigma, nS = 4)  # Upper-policy
 env     = gym.make('CartPole-v0')
 
+# ------------------------------------------------------------------------------
+# Allow consistent results
+# ------------------------------------------------------------------------------
+env.seed(10)
+np.random.seed(0)
+
 # Benchmark of initial policy
 print '--------------------------------------'
 print 'Initial policy...'
