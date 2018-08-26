@@ -9,6 +9,7 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 
 # Imports needed
 import gym
+import time
 import torch
 torch_type = torch.double
 from CREPS_torch    import computeSampleWeighting, UpperPolicy
@@ -19,7 +20,7 @@ from benchmarks     import bench
 # Contextual REPS algorithm parameters
 # ------------------------------------------------------------------------------
 eps = 1            # Relative entropy bound (lower -> more exploration)
-M = 100            # Number of rollouts per policy iteration
+M = 10000            # Number of rollouts per policy iteration
 
 # -----------------------------------------------------------------------------
 # Scenario parameters
@@ -51,12 +52,23 @@ muR, solved = bench(env, hpol, pol, True)
 # Policy iteration
 # ------------------------------------------------------------------------------
 k = 0
+total_time = 0
 while not solved:
     print('--------------------------------------')
     print('Run', k+1)
     k += 1
 
     R, W, F = predictReward(env, M, hpol, pol)
+
+    s = time.time()
+
     p = computeSampleWeighting(R, F, eps)
     hpol.update(W, F, p)
+
+    t = time.time() - s
+    print("Update time", t)
+    total_time += t
+
     muR, solved = bench(env, hpol, pol, True)
+
+print("Average update time", total_time/k)

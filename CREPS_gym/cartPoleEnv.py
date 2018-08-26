@@ -12,6 +12,7 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 # Imports needed
 import numpy as np
 import gym
+import time
 if use_torch:
     import torch
     from CREPS_torch    import computeSampleWeighting, UpperPolicy
@@ -61,13 +62,23 @@ muR, solved = bench(env, hpol, pol, True)
 # Policy iteration
 # ------------------------------------------------------------------------------
 k = 0
+total_time = 0
 while not solved:
     print('--------------------------------------')
     print('Run', k+1)
     k += 1
 
     R, W, F = predictReward(env, M, hpol, pol)
+
+    s = time.time()
+
     p = computeSampleWeighting(R, F, eps)
     hpol.update(W, F, p)
 
+    t = time.time() - s
+    print("Update time", t)
+    total_time += t
+
     muR, solved = bench(env, hpol, pol, True)
+
+print("Average update time", total_time/k)
