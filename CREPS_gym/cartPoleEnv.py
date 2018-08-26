@@ -2,6 +2,8 @@
     policy for gym CartPole environment.
 """
 
+use_torch = False
+
 # Allow import of CREPS.py module in upper directory
 import sys
 import os.path
@@ -10,9 +12,13 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 # Imports needed
 import numpy as np
 import gym
-import torch
 import time
-from CREPS_numpy    import computeSampleWeighting, UpperPolicy
+if use_torch:
+    import torch
+    from CREPS_torch    import computeSampleWeighting, UpperPolicy
+    torch.manual_seed(2)
+else:
+    from CREPS_numpy    import computeSampleWeighting, UpperPolicy
 from scenario       import LowerPolicy, predictReward # Scenario specific
 from benchmarks     import bench
 
@@ -33,8 +39,11 @@ upper_sigma = np.eye(4) * [.1, .1, .1, .1]
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes
 # ------------------------------------------------------------------------------
-pol = LowerPolicy(target)                           # Lower-policy
-hpol = UpperPolicy(4)  # Upper-policy
+pol = LowerPolicy(target)
+if use_torch:
+    hpol = UpperPolicy(4, torchOut = False)
+else:
+    hpol = UpperPolicy(4)
 hpol.set_parameters(upper_a, upper_A, upper_sigma)
 env = gym.make('CartPole-v0')
 
