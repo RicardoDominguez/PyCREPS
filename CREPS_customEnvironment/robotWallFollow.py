@@ -14,6 +14,11 @@ from scenario import Cost, LowerPolicy, Model, predictReward # Scenario specific
 from benchmarks import validatePolicy
 
 # ------------------------------------------------------------------------------
+# Allow consistent results
+# ------------------------------------------------------------------------------
+np.random.seed(0)
+
+# ------------------------------------------------------------------------------
 # Contextual REPS algorithm parameters
 # ------------------------------------------------------------------------------
 eps = 1            # Relative entropy bound (lower -> more exploration)
