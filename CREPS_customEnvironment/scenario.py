@@ -41,7 +41,6 @@ class Cost:
 
         vald = np.invert(vald) # Next to the wall
         C[vald] = 0
-
         return C
 
 class LowerPolicy:
@@ -208,8 +207,8 @@ class Model:
         indx4 = empty((M,), dtype = 'bool')
         indx5 = empty((M,), dtype = 'bool')
         indx6 = empty((M,), dtype = 'bool')
-        R = np.zeros((M,))
-        for t in xrange(H):
+        R = np.zeros((M,1))
+        for t in range(H):
             # Control action to expected odometry ----------------------------------
             # u (M x 2) - not used afterwards
             # delta_l is arr1 - (M x 1) - used until model step
@@ -365,7 +364,7 @@ class Model:
             indxSp1 = None
 
             x = np.concatenate([arr1.reshape(-1,1), arr2.reshape(-1,1)], 1)
-            R += cost.sample(x)
+            R += cost.sample(x).reshape(-1, 1)
         return R
 
 def sampleContext(N):

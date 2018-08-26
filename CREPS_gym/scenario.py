@@ -51,7 +51,7 @@ def predictReward(env, M, hipol, pol):
         W       lower-level weights used for each episode       (M x nW)
         F       context of each episode                         (M x nS)
     '''
-    R = np.zeros(M)
+    R = np.zeros((M, 1))
     W = np.empty((M, 4))
     F = np.empty((M, 4))
 

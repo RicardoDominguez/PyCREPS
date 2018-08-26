@@ -79,7 +79,7 @@ def predictReward(M, hipol, pol, gp):
     '''
     F = sampleContext(M) # Draw context
     W = hipol.sample(F)  # Draw lower-policy parameters
-    R = np.zeros(M)
+    R = np.zeros((M,1))
 
     H = 0
     not_done = np.ones(M, dtype = 'bool')

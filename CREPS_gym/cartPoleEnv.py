@@ -10,9 +10,11 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 # Imports needed
 import numpy as np
 import gym
-from CREPS      import computeSampleWeighting, UpperPolicy
-from scenario   import LowerPolicy, predictReward # Scenario specific
-from benchmarks import bench
+import torch
+import time
+from CREPS_numpy    import computeSampleWeighting, UpperPolicy
+from scenario       import LowerPolicy, predictReward # Scenario specific
+from benchmarks     import bench
 
 # ------------------------------------------------------------------------------
 # Contextual REPS algorithm parameters
@@ -24,7 +26,7 @@ M = 100            # Number of rollouts per policy iteration
 # Scenario parameters
 # -----------------------------------------------------------------------------
 target = np.zeros(4) # Target state for policy
-upper_a  = np.array([[1., 0., 1., 0.]]).T # Initial upper-policy parameters
+upper_a = np.array([[1., 0., 1., 0.]]).T # Initial upper-policy parameters
 upper_A = np.zeros((4, 4))
 upper_sigma = np.eye(4) * [.1, .1, .1, .1]
 

@@ -20,7 +20,7 @@ class GPS:
         Xt = X[:, self.dyni] # Inputs of the model
         Yd[:, self.difi] = Y[:, self.difi] - X[:, self.difi] # Differences
         Yt = Yd[:, self.dyno] # Outputs of the model
-        for i in xrange(self.nout):
+        for i in range(self.nout):
             try:
                 self.gps[i].fit(Xt, Yt[:, i])
             except ValueError as e:
@@ -33,7 +33,7 @@ class GPS:
         '''
         GPin = X[:, self.dyni]
         Y = np.empty((X.shape[0], self.nout))
-        for i in xrange(self.nout):
+        for i in range(self.nout):
             Y[:, i] = self.gps[i].predict(GPin)
         Y[:, self.difi] += X[:, self.difi]
         return Y

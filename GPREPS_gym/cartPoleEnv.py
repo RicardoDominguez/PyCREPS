@@ -10,10 +10,10 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 # Imports needed
 import numpy as np
 import gym
-from CREPS      import computeSampleWeighting, UpperPolicy
-from scenario   import LowerPolicy, predictReward, systemRollout
-from GP         import GPS
-from benchmarks import bench
+from CREPS_numpy    import computeSampleWeighting, UpperPolicy
+from scenario       import LowerPolicy, predictReward, systemRollout
+from GP             import GPS
+from benchmarks     import bench
 
 # ------------------------------------------------------------------------------
 # Contextual REPS algorithm parameters
@@ -34,14 +34,16 @@ gp = GPS(dyni, dyno, difi)
 # Scenario parameters
 # -----------------------------------------------------------------------------
 target = np.zeros(4) # Target state for policy
-upper_mean  = np.array([1, 0, 1, 0]) # Initial upper-policy parameters
-upper_sigma = np.eye(upper_mean.shape[0]) * [.1, .1, .1, .1]
+upper_a = np.array([[1, 0, 1, 0]]).T # Initial upper-policy parameters
+upper_A = np.zeros((4, 4))
+upper_sigma = np.eye(upper_a.shape[0]) * [.1, .1, .1, .1]
 
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes
 # ------------------------------------------------------------------------------
-pol     = LowerPolicy(target)                           # Lower-policy
-hpol    = UpperPolicy(upper_mean, upper_sigma, nS = 4)  # Upper-policy
+pol     = LowerPolicy(target) # Lower-policy
+hpol    = UpperPolicy(4)  # Upper-policy
+hpol.set_parameters(upper_a, upper_A, upper_sigma)
 env     = gym.make('CartPole-v0')
 
 # ------------------------------------------------------------------------------
@@ -59,7 +61,7 @@ muR, solved = bench(env, hpol, pol, True)
 # Initial rollouts
 # ------------------------------------------------------------------------------
 X, Y = np.empty([0, 5]), np.empty([0, 5])
-for j in xrange(NinitRolls):
+for j in range(NinitRolls):
     x, y = systemRollout(env, hpol, pol)
     X = np.concatenate((X, x))
     Y = np.concatenate((Y, y))
