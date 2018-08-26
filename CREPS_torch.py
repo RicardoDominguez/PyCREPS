@@ -169,7 +169,7 @@ class UpperPolicy:
         if type(S).__module__ == np.__name__:
             S = torch.from_numpy(S)
 
-        W = torch.zeros(S.shape[0], self.a.shape[0])
+        W = torch.zeros(S.shape[0], self.a.shape[0], dtype = torch_type)
         for sample in range(S.shape[0]):
             self.mvnrnd.loc = (self.a + self.A.mm(S[sample, :].view(-1,1))).view(-1)
             W[sample, :] = self.mvnrnd.sample()
