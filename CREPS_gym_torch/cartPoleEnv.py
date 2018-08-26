@@ -20,7 +20,7 @@ from benchmarks     import bench
 # Contextual REPS algorithm parameters
 # ------------------------------------------------------------------------------
 eps = 1            # Relative entropy bound (lower -> more exploration)
-M = 10000            # Number of rollouts per policy iteration
+M = 100            # Number of rollouts per policy iteration
 
 # -----------------------------------------------------------------------------
 # Scenario parameters
