@@ -3,7 +3,7 @@
 """
 
 use_torch = False
-use_theano = True
+use_theano = False
 
 # Allow import of CREPS.py module in upper directory
 import sys
