@@ -10,7 +10,7 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 # Imports needed
 import numpy as np
 import gym
-from CREPS_numpy    import computeSampleWeighting, UpperPolicy
+from CREPS          import computeSampleWeighting, UpperPolicy
 from scenario       import LowerPolicy, predictReward, systemRollout
 from GP             import GPS
 from benchmarks     import bench

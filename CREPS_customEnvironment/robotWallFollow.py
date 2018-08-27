@@ -9,7 +9,7 @@ sys.path.append( os.path.abspath(os.path.join(os.path.dirname(__file__), os.path
 
 # Imports needed
 import numpy as np
-from CREPS_numpy    import computeSampleWeighting, UpperPolicy
+from CREPS          import computeSampleWeighting, UpperPolicy
 from scenario       import Cost, LowerPolicy, Model, predictReward # Scenario specific
 from benchmarks     import validatePolicy
 

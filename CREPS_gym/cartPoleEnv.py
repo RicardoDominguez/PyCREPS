@@ -21,7 +21,7 @@ if use_torch:
 elif use_theano:
     from CREPS_theano import computeSampleWeighting, UpperPolicy
 else:
-    from CREPS_numpy import computeSampleWeighting, UpperPolicy
+    from CREPS import computeSampleWeighting, UpperPolicy
 from scenario       import LowerPolicy, predictReward # Scenario specific
 from benchmarks     import bench
 
