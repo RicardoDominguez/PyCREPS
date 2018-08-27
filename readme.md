@@ -26,6 +26,8 @@ The file [*CREPS.py*](CREPS.py) implements the upper policy as a linear-Gaussian
 
 All other elements of the Reinforcement Learning problem &mdash;environment dynamics, reward function and lower policy&mdash; must be implemented for your particular scenario as you consider best with only a few considerations in mind to ensure compatibility with the upper policy and policy update function. It is then very straightforward to put everything together, as illustrated in the next section.
 
+Implementations of [*CREPS.py*](CREPS.py) using PyTorch ([*CREPS_torch.py*](CREPS_torch.py)) and Theano ([*CREPS_theano.py*](CREPS_theano.py)) are provided, but please ensure that your application is sufficiently computationally expensive to take advantage of these methods (otherwise the computational overhead introduced will be larger than the run-time performance improvements).
+
 ## How to set up your own scenario
 
 The steps of the each policy iteration are:

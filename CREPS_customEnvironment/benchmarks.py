@@ -315,9 +315,9 @@ def simulateStepByStep(env, x0, T, pol, w):
         u = pol.sample(w, x)[0]
         x, rx = env.step(u)
         env.plot(True)
-        print 'Distance ', x[0]
-        print 'Computed angle ', x[1] * 180 / np.pi
-        print 'Wheel speed ', u
+        print('Distance ', x[0])
+        print('Computed angle ', x[1] * 180 / np.pi)
+        print('Wheel speed ', u)
 
     plt.show()
 
@@ -389,7 +389,7 @@ def validatePolicy(N, T, dt, pol, hpol, verbose = True):
     # Environment
     env = Environment(dt, noise = False)
 
-    for i in xrange(N):
+    for i in range(N):
         x0 = x0s[i, :]
         w = hpol.mean(x0.reshape(1,-1))
         collision, reached_target, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(env, x0, T, pol, w, plot = False)
@@ -397,14 +397,14 @@ def validatePolicy(N, T, dt, pol, hpol, verbose = True):
         a_collision.append(collision)
 
         if verbose:
-            print '-----------------------------------------------------------------'
-            print 'Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi)
+            print('-----------------------------------------------------------------')
+            print('Initial state: Distance ', x0[0], ' mm Angle: ', round(x0[1]*180/np.pi))
 
         if collision:
-            if verbose: print 'COLLISION OCURRED'
+            if verbose: print('COLLISION OCURRED')
             n_collisions += 1
         else:
-            if verbose: print 'No collision ocurred'
+            if verbose: print('No collision ocurred')
 
             if time_to_distance != -1:
                 n_converge += 1
@@ -412,19 +412,19 @@ def validatePolicy(N, T, dt, pol, hpol, verbose = True):
                 a_max_overshoot.append(max_overshoot)
 
                 if verbose:
-                    print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
-                    print 'Time to target distance (s): ', time_to_distance * env.dt
+                    print('Maximum overshoot (mm): ', np.round(max_overshoot, 1))
+                    print('Time to target distance (s): ', time_to_distance * env.dt)
             else:
-                if verbose: print 'DID NOT ACHIEVE THE TARGET DISTANCE'
+                if verbose: print('DID NOT ACHIEVE THE TARGET DISTANCE')
 
-    print '\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2)
+    print('\n\nNumber of collisions: ', n_collisions, ' , failure rate ', np.round(n_collisions / float(N), 2))
 
     if N - n_collisions != 0:
-        print 'Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2)
+        print('Number reached target distance: ', n_converge, ' converge rate, ', np.round(n_converge / float(N - n_collisions), 2))
 
     if len(a_time_to_distance) > 0:
-        print 'Mean time to target distance: ', np.round(np.mean(a_time_to_distance)*env.dt, 2), ' std: ', np.round(np.std(a_time_to_distance), 2)
-        print 'Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4)
+        print('Mean time to target distance: ', np.round(np.mean(a_time_to_distance)*env.dt, 2), ' std: ', np.round(np.std(a_time_to_distance), 2))
+        print('Mean overshoot: ', np.round(np.mean(a_max_overshoot), 2), ' std: ', np.round(np.std(a_max_overshoot), 4))
 
 def simulateResults(env, x0, T, pol, w, id = 0):
     # Get performance metrics
@@ -437,19 +437,19 @@ def simulateResults(env, x0, T, pol, w, id = 0):
     plt.xlabel('x axis (mm)')
     plt.ylabel('y axis (mm)')
 
-    print '\n\n------------------------------------------------------------'
+    print('\n\n------------------------------------------------------------')
     if id:
-        print 'Simulation results (', str(id), '):'
+        print('Simulation results (', str(id), '):')
     else:
-        print 'Simulation results: '
+        print('Simulation results: ')
 
-    print '------------------------------------------------------------'
-    print 'Collision: ', collision
+    print('------------------------------------------------------------')
+    print('Collision: ', collision)
     if time_to_distance == -1:
-        print 'Target distance was not reached'
+        print('Target distance was not reached')
     else:
-        print 'Maximum overshoot (mm): ', np.round(max_overshoot, 1)
-        print 'Time to target distance (s): ', time_to_distance * env.dt
+        print('Maximum overshoot (mm): ', np.round(max_overshoot, 1))
+        print('Time to target distance (s): ', time_to_distance * env.dt)
 
         plt.figure((id-1) * 2 + 2)
         plt.subplot(211)
@@ -468,7 +468,7 @@ def simulateResults(env, x0, T, pol, w, id = 0):
         plt.xlabel('Time (s)')
 
         if not id: plt.show()
-    print '\n'
+    print('\n')
 
 def compareWeights(env, x0, T, pol, w1, w2):
     '''

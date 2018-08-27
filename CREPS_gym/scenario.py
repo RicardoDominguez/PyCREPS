@@ -4,6 +4,7 @@
 
 import numpy as np
 
+
 class LowerPolicy:
     '''
     PD controller with discrete output for gym CartPole environment
@@ -24,8 +25,7 @@ class LowerPolicy:
         Outputs:
             u   discrete control action         (1 x 1)
         '''
-        if X.ndim == 1: X = X.reshape(1, -1)
-        return self.discretize(X.dot(W))
+        return self.discretize(X.dot(W).flatten())
 
     def discretize(self, u):
         '''
@@ -51,11 +51,11 @@ def predictReward(env, M, hipol, pol):
         W       lower-level weights used for each episode       (M x nW)
         F       context of each episode                         (M x nS)
     '''
-    R = np.zeros(M)
+    R = np.zeros((M, 1))
     W = np.empty((M, 4))
     F = np.empty((M, 4))
 
-    for rollout in xrange(M):
+    for rollout in range(M):
         s = env.reset()                    # Sample context
         w = hipol.sample(s.reshape(1, -1)) # Sample lower-policy weights
 
