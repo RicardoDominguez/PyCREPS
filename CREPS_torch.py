@@ -241,14 +241,12 @@ class UpperPolicy:
         S = torch.cat((torch.ones(p.shape[0], 1, dtype = torch_type), F), 1)
         P = p.diag()
         bigA = torch.pinverse(S.t().mm(P).mm(S)).mm(S.t()).mm(P).mm(w)
+        a = bigA[0, :].view(-1, 1)
 
-        w_mu_diff = w.t() - bigA[0, :].view(-1,1)
-        sigma = torch.zeros(w.shape[1], w.shape[1], dtype = torch_type)
-        for i in range(p.shape[0]):
-            w_diff = w_mu_diff[:,i].view(-1,1)
-            sigma.add_(p[i] * w_diff.mm(w_diff.t()))
+        wd = w - a.t()
+        sigma = (p * wd.t()).mm(wd)
 
-        self.set_parameters(bigA[0, :].view(-1,1), bigA[1:, :], sigma)
+        self.set_parameters(a, bigA[1:, :].t(), sigma)
 
         if self.verbose:
             print('Policy update: a, A, mean of sigma')

@@ -192,24 +192,20 @@ class UpperPolicy:
                p.ndim == 1
                ), "Incorrect parameter size"
 
-        S = np.asmatrix(np.concatenate((np.ones((p.size, 1)), F), axis = 1))
-        B = np.asmatrix(w);
-        P = np.asmatrix(np.diag(p.reshape(-1)))
+        S = np.concatenate((np.ones((p.size, 1)), F), axis = 1)
+        P = np.diag(p)
 
         # Compute new mean
-        bigA = np.linalg.pinv(S.T * P * S) * S.T * P * B
+        bigA = np.linalg.pinv(S.T.dot(P).dot(S)).dot(S.T).dot(P).dot(w)
         a = bigA[0, :].reshape(-1, 1)
 
         # Compute new covariance matrix
-        w_mu_diff = w.T - a  # (W x N)
-        sigma = np.zeros((a.size, a.size)) # (W x W)
-        for i in range(p.size):
-            sigma += p[i] * w_mu_diff[:, i] * w_mu_diff[:, i].T
+        wd = w - a.T
+        sigma = (p * wd.T).dot(wd)
 
         # Update policy parameters
-        self.set_parameters(np.asarray(a).reshape(-1, 1),
-                            np.asarray(bigA[1:, :].T), sigma)
-        
+        self.set_parameters(a, bigA[1:, :].T, sigma)
+
         if self.verbose:
             print('Policy update: a, A, mean of sigma')
             print(self.a)
