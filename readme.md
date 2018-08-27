@@ -102,6 +102,10 @@ $ python GPREPS_gym/cartPoleEnv.py
  * ``scipy``
 
 
+Optional:
+ * ``pytorch``
+ * ``theano``
+ 
  For the examples:
  * ```gym```
  * ```matplotlib```
