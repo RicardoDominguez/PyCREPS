@@ -103,20 +103,20 @@ class UpperPolicy:
         Parameters
         ----------
 
-        a: numpy.ndarray, shape (n_lower_policy_weights, 1)
+        a: numpy.ndarray, shape (1, n_lower_policy_weights)
             Parameter 'a'
 
-        A: numpy.ndarray, shape (n_lower_policy_weights, n_context_features)
+        A: numpy.ndarray, shape (n_context_features, n_lower_policy_weights)
             Parameter 'A'
 
         sigma: numpy.ndarray, shape (n_lower_policy_weights,
                                     n_lower_policy_weights)
             Covariance matrix
         """
-        n_lower_policy_weights = a.shape[0]
-        assert(a.shape[1] == 1 and
-               A.shape[0] == n_lower_policy_weights and
-               A.shape[1] == self.n_context and
+        n_lower_policy_weights = a.shape[1]
+        assert(a.shape[0] == 1 and
+               A.shape[1] == n_lower_policy_weights and
+               A.shape[0] == self.n_context and
                sigma.shape[0] == n_lower_policy_weights and
                sigma.shape[1] == n_lower_policy_weights
                ), "Incorrect parameter sizes"
@@ -141,10 +141,10 @@ class UpperPolicy:
         W: numpy.ndarray, shape (n_samples, n_lower_policy_weights)
            Sampled lower-policy parameters.
         """
-        W = np.zeros((S.shape[0], self.a.shape[0]))
+        W = np.zeros((S.shape[0], self.a.shape[1]))
+        mus = self.mean(S)
         for sample in range(S.shape[0]):
-            W[sample, :] = mvnrnd(self.a.flatten() + self.A.dot(S[sample, :]),
-                                  self.sigma)
+            W[sample, :] = mvnrnd(mus[sample, :], self.sigma)
         return W
 
     def mean(self, S):
@@ -164,7 +164,7 @@ class UpperPolicy:
         W: numpy.ndarray, shape (n_samples, n_lower_policy_weights)
            Distribution mean for contexts
         """
-        return self.a + self.A.dot(S.T)
+        return self.a + S.dot(self.A)
 
     def update(self, w, F, p):
         """Update the upper-level policy parametersself.
@@ -184,7 +184,7 @@ class UpperPolicy:
             Sample weights
         """
         n_samples = w.shape[0]
-        n_lower_policy_weights = self.a.shape[0]
+        n_lower_policy_weights = self.a.shape[1]
         assert(w.shape[1] == n_lower_policy_weights and
                F.shape[0] == n_samples and
                F.shape[1] == self.n_context and
@@ -197,14 +197,14 @@ class UpperPolicy:
 
         # Compute new mean
         bigA = np.linalg.pinv(S.T.dot(P).dot(S)).dot(S.T).dot(P).dot(w)
-        a = bigA[0, :].reshape(-1, 1)
+        a = bigA[0, :].reshape(1, -1)
 
         # Compute new covariance matrix
-        wd = w - a.T
+        wd = w - a
         sigma = (p * wd.T).dot(wd)
 
         # Update policy parameters
-        self.set_parameters(a, bigA[1:, :].T, sigma)
+        self.set_parameters(a, bigA[1:, :], sigma)
 
         if self.verbose:
             print('Policy update: a, A, mean of sigma')

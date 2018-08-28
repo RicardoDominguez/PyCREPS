@@ -114,21 +114,21 @@ class UpperPolicy:
         Parameters
         ----------
 
-        a: numpy.ndarray or torch.Tensor, shape (n_lower_policy_weights, 1)
+        a: numpy.ndarray or torch.Tensor, shape (1, n_lower_policy_weights)
             Parameter 'a'
 
-        A: numpy.ndarray or torch.Tensor, shape (n_lower_policy_weights,
-                                                n_context_features)
+        A: numpy.ndarray or torch.Tensor, shape (n_context_features,
+                                                n_lower_policy_weights)
             Parameter 'A'
 
         sigma: numpy.ndarray or torch.Tensor, shape (n_lower_policy_weights,
                                                     n_lower_policy_weights)
             Covariance matrix
         """
-        n_lower_policy_weights = a.shape[0]
-        assert(a.shape[1] == 1 and
-               A.shape[0] == n_lower_policy_weights and
-               A.shape[1] == self.n_context and
+        n_lower_policy_weights = a.shape[1]
+        assert(a.shape[0] == 1 and
+               A.shape[1] == n_lower_policy_weights and
+               A.shape[0] == self.n_context and
                sigma.shape[0] == n_lower_policy_weights and
                sigma.shape[1] == n_lower_policy_weights
                ), "Incorrect parameter sizes"
@@ -169,9 +169,10 @@ class UpperPolicy:
         if type(S).__module__ == np.__name__:
             S = torch.from_numpy(S)
 
-        W = torch.zeros(S.shape[0], self.a.shape[0], dtype = torch_type)
+        W = torch.zeros(S.shape[0], self.a.shape[1], dtype = torch_type)
+        mus = self.mean(S)
         for sample in range(S.shape[0]):
-            self.mvnrnd.loc = (self.a + self.A.mm(S[sample, :].view(-1,1))).view(-1)
+            self.mvnrnd.loc = mus[sample, :]
             W[sample, :] = self.mvnrnd.sample()
 
         if self.torchOut:
@@ -200,7 +201,7 @@ class UpperPolicy:
         if type(S).__module__ == np.__name__:
             S = torch.from_numpy(S)
 
-        mu = self.a + self.A.mm(S.t())
+        mu = self.a + S.dot(self.A)
 
         if self.torchOut:
             return mu
@@ -226,7 +227,7 @@ class UpperPolicy:
             Sample weights
         """
         n_samples = w.shape[0]
-        n_lower_policy_weights = self.a.shape[0]
+        n_lower_policy_weights = self.a.shape[1]
         assert(w.shape[1] == n_lower_policy_weights and
                F.shape[0] == n_samples and
                F.shape[1] == self.n_context and
@@ -241,12 +242,12 @@ class UpperPolicy:
         S = torch.cat((torch.ones(p.shape[0], 1, dtype = torch_type), F), 1)
         P = p.diag()
         bigA = torch.pinverse(S.t().mm(P).mm(S)).mm(S.t()).mm(P).mm(w)
-        a = bigA[0, :].view(-1, 1)
+        a = bigA[0, :].view(1, -1)
 
-        wd = w - a.t()
+        wd = w - a
         sigma = (p * wd.t()).mm(wd)
 
-        self.set_parameters(a, bigA[1:, :].t(), sigma)
+        self.set_parameters(a, bigA[1:, :], sigma)
 
         if self.verbose:
             print('Policy update: a, A, mean of sigma')

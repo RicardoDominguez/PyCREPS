@@ -31,9 +31,9 @@ M = 1000           # Number of rollouts per policy iteration
 H = 300     # Episode step-horizon
 dt = 0.1    # in seconds
 target = np.array([10, 0]) # Target state for policy and cost function
-upper_a  =  np.array([[-2, 100, 2, -100, 0, 0, 0, 0, 0, 0, 0, 0]]).T # Initial upper-policy parameters
-upper_A = np.zeros((12, 2))
-upper_sigma = np.eye(upper_a.shape[0]) * [20, 200, 200, 20, 0, 0, 0, 0, 0, 0, 0, 0]
+upper_a  =  np.array([[-2, 100, 2, -100, 0, 0, 0, 0, 0, 0, 0, 0]]) # Initial upper-policy parameters
+upper_A = np.zeros((2, 12))
+upper_sigma = np.eye(upper_a.shape[1]) * [20, 200, 200, 20, 0, 0, 0, 0, 0, 0, 0, 0]
 
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes

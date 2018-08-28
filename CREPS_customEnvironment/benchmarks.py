@@ -391,7 +391,7 @@ def validatePolicy(N, T, dt, pol, hpol, verbose = True):
 
     for i in range(N):
         x0 = x0s[i, :]
-        w = hpol.mean(x0.reshape(1,-1))
+        w = hpol.mean(x0.reshape(1,-1)).T
         collision, reached_target, time_to_distance, max_overshoot, dist_errors, ang_errors = performanceMetric(env, x0, T, pol, w, plot = False)
 
         a_collision.append(collision)
