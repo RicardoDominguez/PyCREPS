@@ -9,7 +9,7 @@ def bench(env, hipol, pol, verbose = False):
     R = np.zeros(N)
     for rollout in range(N):
         x = env.reset()                    # Sample context
-        w = hipol.mean(x.reshape(1, -1)).T # Sample lower-policy weights
+        w = hipol.mean(x.reshape(1, -1))   # Sample lower-policy weights
 
         done = False
         while not done:

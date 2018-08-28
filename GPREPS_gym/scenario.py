@@ -47,7 +47,7 @@ def systemRollout(env, hipol, pol):
     latent = np.empty((201, 5))
 
     x = env.reset()                    # Sample context
-    w = hipol.mean(x.reshape(1, -1)).T # Sample lower-policy weights
+    w = hipol.mean(x.reshape(1, -1))   # Sample lower-policy weights
 
     h = 0
     done = False
