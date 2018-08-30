@@ -25,7 +25,7 @@ M = 100            # Number of rollouts per policy iteration
 # -----------------------------------------------------------------------------
 # Scenario parameters
 # -----------------------------------------------------------------------------
-upper_a = torch.tensor([[1., 0., 1., 0.]], dtype = torch_type).t() # Initial upper-policy parameters
+upper_a = torch.tensor([[1., 0., 1., 0.]], dtype = torch_type) # Initial upper-policy parameters
 upper_A = torch.zeros((4, 4), dtype = torch_type)
 upper_sigma = torch.eye(4, dtype = torch_type) * torch.tensor([.1, .1, .1, .1], dtype = torch_type)
 

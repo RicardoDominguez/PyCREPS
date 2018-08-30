@@ -18,7 +18,7 @@ def bench(env, hipol, pol, verbose = False):
             R[rollout] += r
 
     muR = R.mean()
-    solved = (R == 200).all()
+    solved = muR >= 195
 
     if verbose:
         print('Mean reward', muR)

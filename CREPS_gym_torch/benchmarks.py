@@ -22,7 +22,7 @@ def bench(env, hipol, pol, verbose = False):
     R = torch.zeros(N)
     for rollout in range(N):
         x = torch.from_numpy(env.reset()).view(1, -1)
-        w = hipol.mean(x) # Sample lower-policy weights
+        w = hipol.mean(x).t() # Sample lower-policy weights
 
         done = False
         while not done:
@@ -32,7 +32,7 @@ def bench(env, hipol, pol, verbose = False):
             R[rollout] += r
 
     muR = round(float(R.mean()), 3)
-    solved = (R == 200).all()
+    solved = muR >= 195
 
     if verbose:
         print('Mean reward', muR)

@@ -201,7 +201,7 @@ class UpperPolicy:
         if type(S).__module__ == np.__name__:
             S = torch.from_numpy(S)
 
-        mu = self.a + S.dot(self.A)
+        mu = self.a + S.mm(self.A)
 
         if self.torchOut:
             return mu
