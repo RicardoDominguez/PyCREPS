@@ -1,5 +1,5 @@
 """ Main scrip illustrating the use of Contextual REPS to learn an upper-level
-    policy for gym CartPole environment.
+    policy for gym Acrobot environment.
 """
 
 use_torch = False

@@ -3,7 +3,8 @@ import numpy as np
 def bench(env, hipol, pol, verbose = False):
     '''
     Return the average reward over 100 episodes and whether the problem is solved.
-    The problem is solved if all rewards are 200 (as specified by gym)
+    The problem is solved when the mean reward over 100 episodes is equal or
+    greater than 195 (as specified by gym).
     '''
     N = 100
     R = np.zeros(N)

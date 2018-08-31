@@ -2,8 +2,7 @@ import numpy as np
 
 def bench(env, hipol, pol, verbose = False):
     '''
-    Return the average reward over 100 episodes and whether the problem is solved.
-    The problem is solved if all rewards are 200 (as specified by gym)
+    Return the mean reward over N episodes and its standard deviation.
     '''
     N = 100
     R = np.zeros(N)

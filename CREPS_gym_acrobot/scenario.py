@@ -7,7 +7,7 @@ import numpy as np
 
 class LowerPolicy:
     '''
-    Linear controller with discrete output for gym CartPole environment
+    Linear controller with discrete output for gym Acrobot environment
     '''
     def sample(self, W, X):
         '''
