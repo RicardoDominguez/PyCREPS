@@ -22,11 +22,11 @@ Contextual Policy Search allows to generalize policies to multiple contexts, whe
  * A lower policy __&pi;(u | x; w)__ which determines the action __u__ taken by the agent given its state __x__ and some parameters __w__.
  * An upper policy __&pi;(w | s)__  which determines the lower policy parameters __w__ given the context __s__.
 
-The file [*CREPS.py*](CREPS.py) implements the upper policy as a linear-Gaussian model which is updated using weighted ML.
+The file [CREPS.py](CREPS.py) implements the upper policy as a linear-Gaussian model which is updated using weighted ML.
 
 All other elements of the Reinforcement Learning problem &mdash;environment dynamics, reward function and lower policy&mdash; must be implemented for your particular scenario as you consider best with only a few considerations in mind to ensure compatibility with the upper policy and policy update function. It is then very straightforward to put everything together, as illustrated in the next section.
 
-Implementations of [*CREPS.py*](CREPS.py) using PyTorch ([*CREPS_torch.py*](CREPS_torch.py)) and Theano ([*CREPS_theano.py*](CREPS_theano.py)) are provided, but please ensure that your application is sufficiently computationally expensive to take advantage of these methods (otherwise the computational overhead introduced will be larger than the run-time performance improvements).
+Implementations of [CREPS.py](CREPS.py) using PyTorch ([CREPS_torch.py](CREPS_torch.py)) and Theano ([CREPS_theano.py](CREPS_theano.py)) are provided, but please ensure that your application is sufficiently computationally expensive to take advantage of these methods (otherwise the computational overhead introduced will be larger than the run-time performance improvements).
 
 ## How to set up your own scenario
 
@@ -77,23 +77,28 @@ def predictReward(env, M, hipol, pol):
 ## Examples
 
 In all the examples provided there are three files:
- * Script called to train the policy for the specific scenario (CREPS_gym/cartPoleEnv.py, CREPS_customEnvironment/robotWallFollow.py, GPREPS_gym/cartPoleEnv.py)
- * File containing functions/classes which implement the environment dynamics, reward function and lower policy (scenario.py).
+ * Script called to train the policy for the specific scenario (foo_learn.py)
+ * File containing functions/classes which implement the environment dynamics, reward function and lower policy (scenario.py)
  * File with some functions to benchmark the performance of the algorithm at each policy update (benchmarks.py)
 
-For a full example of CREPS being used to solve the CartPole OpenAI environment check [/CREPS_gym](/CREPS_gym). To run it use
+For a full example of CREPS being used to solve the [Cart Pole](https://gym.openai.com/envs/CartPole-v0/) OpenAI gym environment check [/cartPole](/cartPole). This example includes the optional use of PyTorch and Theano through the global flags ``use_torch`` and ``use_theano``. To run it use:
 ```
-$ python CREPS_gym/cartPoleEnv.py
-```
-
-For a full example of how you could use CREPS for your own Reinforcement Learning problem check [/CREPS_customEnvironment](/CREPS_customEnvironment), where a differential drive robot learns to follow a straight wall using a PID controller (here the context is the starting distance from the wall and initial angle with respect to the wall). To run it use
-```
-$ python CREPS_customEnvironment/robotWallFollow.py
+$ python cartPole/cartPole_learn.py
 ```
 
-Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. [/GPREPS_gym](/GPREPS_gym) offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment. To run it use
+For a full example of CREPS being used to solve the [Acrobot](https://gym.openai.com/envs/Acrobot-v1/) OpenAI gym environment check [/acrobot](/acrobot). To run it use:
 ```
-$ python GPREPS_gym/cartPoleEnv.py
+$ python acrobot/acrobot_learn.py
+```
+
+For a full example of how you could use CREPS for your own Reinforcement Learning problem check [/customEnv](/customEnv), where a differential drive robot learns to follow a straight wall using a PID controller (here the context is the starting distance from the wall and initial angle with respect to the wall). To run it use
+```
+$ python customEnv/robot_learn.py
+```
+
+Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. [/GPREPS_cartPole](/GPREPS_cartPole) offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment. To run it use
+```
+$ python GPREPS_cartPole/cartPole_learn.py
 ```
 
 
@@ -105,7 +110,7 @@ $ python GPREPS_gym/cartPoleEnv.py
 Optional:
  * ``pytorch``
  * ``theano``
- 
+
  For the examples:
  * ```gym```
  * ```matplotlib```
