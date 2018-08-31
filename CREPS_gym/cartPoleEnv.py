@@ -34,7 +34,6 @@ M = 100            # Number of rollouts per policy iteration
 # -----------------------------------------------------------------------------
 # Scenario parameters
 # -----------------------------------------------------------------------------
-target = np.zeros(4) # Target state for policy
 upper_a = np.array([[1., 0., 1., 0.]]) # Initial upper-policy parameters
 upper_A = np.zeros((4, 4))
 upper_sigma = np.eye(4) * [.1, .1, .1, .1]
@@ -42,7 +41,7 @@ upper_sigma = np.eye(4) * [.1, .1, .1, .1]
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes
 # ------------------------------------------------------------------------------
-pol = LowerPolicy(target)
+pol = LowerPolicy()
 if use_torch:
     hpol = UpperPolicy(4, torchOut = False)
 else:

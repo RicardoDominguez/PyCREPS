@@ -7,15 +7,8 @@ import numpy as np
 
 class LowerPolicy:
     '''
-    PD controller with discrete output for gym CartPole environment
+    Linear policy with discrete output for gym CartPole environment
     '''
-    def __init__(self, target):
-        '''
-        Inputs:
-            target      (nO, )
-        '''
-        self.target = target # To compute error
-
     def sample(self, W, X):
         '''
         Inputs:

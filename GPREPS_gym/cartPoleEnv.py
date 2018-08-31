@@ -33,7 +33,6 @@ gp = GPS(dyni, dyno, difi)
 # -----------------------------------------------------------------------------
 # Scenario parameters
 # -----------------------------------------------------------------------------
-target = np.zeros(4) # Target state for policy
 upper_a = np.array([[1, 0, 1, 0]]) # Initial upper-policy parameters
 upper_A = np.zeros((4, 4))
 upper_sigma = np.eye(upper_a.shape[1]) * [.1, .1, .1, .1]
@@ -41,7 +40,7 @@ upper_sigma = np.eye(upper_a.shape[1]) * [.1, .1, .1, .1]
 # ------------------------------------------------------------------------------
 # Initialization of necesary classes
 # ------------------------------------------------------------------------------
-pol     = LowerPolicy(target) # Lower-policy
+pol     = LowerPolicy() # Lower-policy
 hpol    = UpperPolicy(4)  # Upper-policy
 hpol.set_parameters(upper_a, upper_A, upper_sigma)
 env     = gym.make('CartPole-v0')

@@ -7,7 +7,7 @@ torch_type = torch.double
 
 class LowerPolicy:
     """
-    PD controller with discrete output for gym CartPole environment
+    Linear policy with discrete output for gym CartPole environment
     """
     def sample(self, W, X):
         """Sample lower-level policy.
