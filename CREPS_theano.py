@@ -26,11 +26,11 @@ def compileDualFunction():
     Z_sum = Z.sum()
     log_sum_exp = R_over_eta_max + T.log(Z_sum / F.shape[0])
 
-    f = eta * (eps + log_sum_exp) + F_mean.dot(theta)
-    d_eta = eps + log_sum_exp - (Z.dot(R_over_eta) / Z_sum)
-    d_theta = F_mean - (Z.dot(F) / Z_sum)
+    # f wrapped in mean to prevent "cost must be a scalar" error
+    f = T.mean(eta * (eps + log_sum_exp) + F_mean.dot(theta))
+    d_x = T.grad(f, x)
 
-    return theano.function([x, R, F, eps], [f, d_eta, d_theta])
+    return theano.function([x, R, F, eps], [f, d_x])
 
 def compileSampleWeights():
     x = T.dvector('x')
@@ -109,8 +109,7 @@ def computeSampleWeighting(R, F, eps):
     # Minimize dual function using L-BFGS-B
     # ----------------------------------------------------------------------
     def dual_fnc(x): # Dual function with analyitical gradients
-        f, deta, dtheta = t_dual_fnc(x, R, F, eps)
-        return f, np.append(deta, dtheta)
+        return t_dual_fnc(x, R, F, eps)
 
     # Initial point
     x0 = [1] + [1] * F.shape[1]

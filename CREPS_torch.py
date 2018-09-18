@@ -45,9 +45,11 @@ def computeSampleWeighting(R, F, eps):
     # ----------------------------------------------------------------------
     # Minimize dual function using L-BFGS-B
     # ----------------------------------------------------------------------
-    def dual_fnc(x): # Dual function with analyitical gradients
+    def dual_fnc(x_): # Dual function with analyitical gradients
+        x = torch.as_tensor(x_)
+
         eta = x[0]
-        theta = torch.from_numpy(x[1:]).view(-1,1)
+        theta = x[1:].view(-1,1)
 
         F_mean = F.mean(0).view(1,-1)
         R_over_eta = (R - F.mm(theta)) / eta
@@ -57,6 +59,7 @@ def computeSampleWeighting(R, F, eps):
         log_sum_exp = R_over_eta_max + torch.log(Z_sum / F.shape[0])
 
         f = eta * (eps + log_sum_exp) + F_mean.mm(theta)
+        
         d_eta = eps + log_sum_exp - Z.t().mm(R_over_eta)/Z_sum
         d_theta = F_mean - (Z.t().mm(F) / Z_sum)
         return f.numpy(), np.append(d_eta.numpy(), d_theta.numpy())
@@ -97,8 +100,8 @@ class UpperPolicy:
     n_context: int
         Number of context features
 
-        torchOut: bool, optional (default: True)
-    If True the policy returns torch tensors, otherwise numpy arrays
+    torchOut: bool, optional (default: True)
+        If True the policy returns torch tensors, otherwise numpy arrays
 
     verbose: bool, optional (default: False)
         If True prints the policy parameters after a policy update
