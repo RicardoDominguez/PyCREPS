@@ -9,42 +9,73 @@ from numpy.random import multivariate_normal as mvnrnd
 import theano
 import theano.tensor as T
 
-
-def compileDualFunction():
-    x = T.dvector('x')
-    R = T.dmatrix('R')
-    F = T.dmatrix('F')
-    eps = T.dscalar('eps')
-
-    eta = x[0]
-    theta = x[1:].reshape((-1, 1))
-
-    F_mean = F.mean(0).reshape((1, -1))
-    R_over_eta = (R - F.dot(theta)) / eta
-    R_over_eta_max = R_over_eta.max()
-    Z = T.exp(R_over_eta - R_over_eta_max).T
-    Z_sum = Z.sum()
-    log_sum_exp = R_over_eta_max + T.log(Z_sum / F.shape[0])
-
-    # f wrapped in mean to prevent "cost must be a scalar" error
-    f = T.mean(eta * (eps + log_sum_exp) + F_mean.dot(theta))
-    d_x = T.grad(f, x)
-
-    return theano.function([x, R, F, eps], [f, d_x])
-
-def compileSampleWeights():
-    x = T.dvector('x')
-    R = T.dmatrix('R')
-    F = T.dmatrix('F')
-
-    eta = x[0]
-    theta = x[1:].reshape((-1, 1))
-
-    R_baseline_eta = (R - F.dot(theta)) / eta
-    p = T.exp(R_baseline_eta - R_baseline_eta.max())
-    p_s = p / p.sum()
-
-    return theano.function([x, R, F], p_s)
+class dualFunction:
+    """Used to compute dual function and its derivative.
+    
+    Using this class allows to set shared theano variables, improving run time
+    performance.
+    """
+    def __init__(self):
+        self.init = False
+    
+    def updateSharedVar(self, R, F, eps):
+        """Update the shared variables R, F and eps.
+        
+        If the variables have not been initialised (self.init), the shared
+        variables R, F and eps and the variable x are also initialized.
+        
+        Parameters
+        ----------
+    
+        R: numpy.ndarray, shape (n_samples, 1)
+            Rewards
+    
+        F: numpy.ndarray, shape (n_samples, n_context_features)
+            Context features
+    
+        eps: float
+            Epsilon
+        """
+        if self.init: # Update variables
+            self.R.set_value(R)
+            self.F.set_value(F)
+            self.eps.set_value(eps)
+        else: # Initialise if needed
+            self.x = T.dvector('x')
+            self.R = theano.shared(R)
+            self.F = theano.shared(F)
+            self.eps = theano.shared(eps)
+            self.setLossGrad()
+            self.init = True
+        
+    def setLossGrad(self):
+        """Set the theano function to compute the dual func and its gradient.
+        
+        This function only needs to be called once (not every policy update).
+        
+        The theano variables self.x, self.F, self.R and self.eps must be 
+        defined previous to this function call.
+        
+        The function for computing the sample weights is also compiled.
+        """
+        eta = self.x[0]
+        theta = self.x[1:].reshape((-1, 1))
+    
+        F_mean = self.F.mean(0).reshape((1, -1))
+        R_over_eta = (self.R - self.F.dot(theta)) / eta
+        R_over_eta_max = R_over_eta.max()
+        Z = T.exp(R_over_eta - R_over_eta_max).T
+        Z_sum = Z.sum()
+        log_sum_exp = R_over_eta_max + T.log(Z_sum / self.F.shape[0])
+    
+        # f wrapped in mean to prevent "cost must be a scalar" error
+        f = T.mean(eta * (self.eps + log_sum_exp) + F_mean.dot(theta))
+        d_x = T.grad(f, self.x)
+        self.sample_f = theano.function([self.x], [f, d_x])
+        
+        # sample weights
+        p = Z / Z_sum
+        self.sample_weights = theano.function([self.x], p)
 
 def compileLinGaussMean():
     a = T.dmatrix('a')
@@ -73,8 +104,7 @@ def compileMLUpdate():
 
     return theano.function([S, W, p], [a, A, sigma])
 
-t_dual_fnc = compileDualFunction()
-t_samp_weights = compileSampleWeights()
+t_dualFnc = dualFunction()
 t_lin_gauss_mean = compileLinGaussMean()
 t_ML_update = compileMLUpdate()
 
@@ -105,12 +135,10 @@ def computeSampleWeighting(R, F, eps):
     assert(R.shape[1] == 1 and
            R.shape[0] == F.shape[0]
            ), "Incorrect parameter size"
-    # ----------------------------------------------------------------------
-    # Minimize dual function using L-BFGS-B
-    # ----------------------------------------------------------------------
-    def dual_fnc(x): # Dual function with analyitical gradients
-        return t_dual_fnc(x, R, F, eps)
-
+    
+    # Update theano shared variables
+    t_dualFnc.updateSharedVar(R, F, eps)
+    
     # Initial point
     x0 = [1] + [1] * F.shape[1]
 
@@ -119,12 +147,10 @@ def computeSampleWeighting(R, F, eps):
     bds = np.vstack(([[min_eta, None]], np.tile(None, (F.shape[1], 2))))
 
     # Minimize using L-BFGS-B algorithm
-    x = fmin_l_bfgs_b(dual_fnc, x0, bounds=bds)[0]
+    x = fmin_l_bfgs_b(t_dualFnc.sample_f, x0, bounds=bds)[0]
 
-    # ----------------------------------------------------------------------
-    # Determine weights of individual samples for policy update
-    # ----------------------------------------------------------------------
-    return t_samp_weights(x, R, F).reshape(-1,)
+    # Return weights of individual samples for policy update
+    return t_dualFnc.sample_weights(x).reshape(-1,)
 
 
 class UpperPolicy:
