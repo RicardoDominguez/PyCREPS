@@ -14,14 +14,20 @@ class dualFunction:
     
     Using this class allows to set shared theano variables, improving run time
     performance.
+    
+    Theano functions:
+        self.sample_f: evaluate dual function at x and its gradient
+        self.sample_weights: evaluate weights for weighted ML update
+        self.updateGauss: update upper level parameters a, A, S
     """
     def __init__(self):
-        self.init = False
+        self.initRFeps = False
+        self.initGauss = False
     
-    def updateSharedVar(self, R, F, eps):
+    def updateSharedVarRFeps(self, R, F, eps):
         """Update the shared variables R, F and eps.
         
-        If the variables have not been initialised (self.init), the shared
+        If the variables have not been initialised (self.initRFeps), the shared
         variables R, F and eps and the variable x are also initialized.
         
         Parameters
@@ -36,7 +42,7 @@ class dualFunction:
         eps: float
             Epsilon
         """
-        if self.init: # Update variables
+        if self.initRFeps: # Update variables
             self.R.set_value(R)
             self.F.set_value(F)
             self.eps.set_value(eps)
@@ -46,18 +52,59 @@ class dualFunction:
             self.F = theano.shared(F)
             self.eps = theano.shared(eps)
             self.setLossGrad()
-            self.init = True
+            self.initRFeps = True
+            
+    def updateSharedGauss(self, a, A):
+        """Update the shared variables a, A and S.
         
-    def setLossGrad(self):
-        """Set the theano function to compute the dual func and its gradient.
+        If the variables have not been initialised (self.initGauss), the shared
+        variables R, F and eps and the variable x are also initialized.
+        
+        Parameters
+        ----------
+
+        a: numpy.ndarray, shape (1, n_lower_policy_weights)
+            Parameter 'a'
+
+        A: numpy.ndarray, shape (n_context_features, n_lower_policy_weights)
+            Parameter 'A'
+
+        sigma: numpy.ndarray, shape (n_lower_policy_weights,
+                                    n_lower_policy_weights)
+            Covariance matrix
+        """
+        if self.initGauss: # Update variables
+            self.a.set_value(a)
+            self.A.set_value(A)
+        else: # Initialise if needed
+            self.a = theano.shared(a)
+            self.A = theano.shared(A)
+            self.setGauss()
+            self.initGauss = True
+     
+    def setGauss(self):
+        """Set the theano function to compute the mean for Gaussian sampling.
         
         This function only needs to be called once (not every policy update).
         
-        The theano variables self.x, self.F, self.R and self.eps must be 
-        defined previous to this function call.
-        
-        The function for computing the sample weights is also compiled.
+        The theano variables self.a and self.A must be defined previous
+        to this function call.
         """
+        S = T.dmatrix('S')
+        mu = self.a + S.dot(self.A)
+        self.gaussMean = theano.function([S], mu)
+        
+    def setLossGrad(self):
+        """Set the theano function to compute dual functions and Gauss update.
+        
+        This function only needs to be called once (not every policy update).
+        
+        The theano variables self.x, self.F, self.R, self.eps, self.a and 
+        self.A must be defined previous to this function call.
+        """
+        # ---------------------------------------------------------------------
+        # Evaluate dual function at x and its gradient.
+        # ---------------------------------------------------------------------
         eta = self.x[0]
         theta = self.x[1:].reshape((-1, 1))
     
@@ -73,40 +120,31 @@ class dualFunction:
         d_x = T.grad(f, self.x)
         self.sample_f = theano.function([self.x], [f, d_x])
         
-        # sample weights
+        # ---------------------------------------------------------------------
+        # Sample weights for weighted ML update.
+        # ---------------------------------------------------------------------
         p = Z / Z_sum
         self.sample_weights = theano.function([self.x], p)
-
-def compileLinGaussMean():
-    a = T.dmatrix('a')
-    A = T.dmatrix('A')
-    S = T.dmatrix('S')
-
-    mu = a + S.dot(A)
-
-    return theano.function([a, A, S], mu)
-
-def compileMLUpdate():
-    S = T.dmatrix('S')
-    W = T.dmatrix('W')
-    p = T.dvector('p')
-
-    P = T.basic.diag(p)
-
-    # Compute new mean
-    bigA = T.nlinalg.pinv(S.T.dot(P).dot(S)).dot(S.T).dot(P).dot(W)
-    a = bigA[0, :]
-    A = bigA[1:, :]
-
-    # Compute new covariance matrix
-    wd = W - a
-    sigma = (p * wd.T).dot(wd)
-
-    return theano.function([S, W, p], [a, A, sigma])
+        
+        # ---------------------------------------------------------------------
+        # Upper level policy update.
+        # ---------------------------------------------------------------------
+        S = T.dmatrix('S')
+        W = T.dmatrix('W')
+        p_ = T.dvector('p_')
+        
+        # Compute means
+        P = T.basic.diag(p_)
+        bigA = T.nlinalg.pinv(S.T.dot(P).dot(S)).dot(S.T).dot(P).dot(W)
+        a = bigA[0, :]
+        A = bigA[1:, :]
+    
+        # Compute new covariance matrix
+        wd = W - a
+        sigma = (p_ * wd.T).dot(wd)
+        self.updateGauss = theano.function([S, W, p_], [a, A, sigma])
 
 t_dualFnc = dualFunction()
-t_lin_gauss_mean = compileLinGaussMean()
-t_ML_update = compileMLUpdate()
 
 def computeSampleWeighting(R, F, eps):
     """Compute sample weights for the upper-level policy update.
@@ -137,7 +175,7 @@ def computeSampleWeighting(R, F, eps):
            ), "Incorrect parameter size"
     
     # Update theano shared variables
-    t_dualFnc.updateSharedVar(R, F, eps)
+    t_dualFnc.updateSharedVarRFeps(R, F, eps)
     
     # Initial point
     x0 = [1] + [1] * F.shape[1]
@@ -189,16 +227,15 @@ class UpperPolicy:
                                     n_lower_policy_weights)
             Covariance matrix
         """
-        n_lower_policy_weights = a.shape[1]
+        self.n_lower_policy_weights = a.shape[1]
         assert(a.shape[0] == 1 and
-               A.shape[1] == n_lower_policy_weights and
+               A.shape[1] == self.n_lower_policy_weights and
                A.shape[0] == self.n_context and
-               sigma.shape[0] == n_lower_policy_weights and
-               sigma.shape[1] == n_lower_policy_weights
+               sigma.shape[0] == self.n_lower_policy_weights and
+               sigma.shape[1] == self.n_lower_policy_weights
                ), "Incorrect parameter sizes"
-        self.a = a
+        t_dualFnc.updateSharedGauss(a, A)
         self.sigma = sigma
-        self.A = A
 
     def sample(self, S):
         """Sample the upper-level policy given the context features.
@@ -217,7 +254,7 @@ class UpperPolicy:
         W: numpy.ndarray, shape (n_samples, n_lower_policy_weights)
            Sampled lower-policy parameters.
         """
-        W = np.zeros((S.shape[0], self.a.shape[1]))
+        W = np.zeros((S.shape[0], self.n_lower_policy_weights))
         mus = self.mean(S)
         for sample in range(S.shape[0]):
             W[sample, :] = mvnrnd(mus[sample, :], self.sigma)
@@ -240,10 +277,10 @@ class UpperPolicy:
         W: numpy.ndarray, shape (n_samples, n_lower_policy_weights)
            Distribution mean for contexts
         """
-        return t_lin_gauss_mean(self.a, self.A, S)
+        return t_dualFnc.gaussMean(S)
 
     def update(self, w, F, p):
-        """Update the upper-level policy parametersself.
+        """Update the upper-level policy parameters.
 
         Update is done using weighted maximum likelihood.
 
@@ -260,8 +297,7 @@ class UpperPolicy:
             Sample weights
         """
         n_samples = w.shape[0]
-        n_lower_policy_weights = self.a.shape[1]
-        assert(w.shape[1] == n_lower_policy_weights and
+        assert(w.shape[1] == self.n_lower_policy_weights and
                F.shape[0] == n_samples and
                F.shape[1] == self.n_context and
                p.shape[0] == n_samples and
@@ -269,7 +305,7 @@ class UpperPolicy:
                ), "Incorrect parameter size"
 
         S = np.concatenate((np.ones((p.size, 1)), F), axis = 1)
-        a, A, sigma = t_ML_update(S, w, p)
+        a, A, sigma = t_dualFnc.updateGauss(S, w, p)
 
         # Update policy parameters
         self.set_parameters(a.reshape(1,-1), A, sigma)
