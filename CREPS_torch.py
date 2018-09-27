@@ -174,6 +174,10 @@ class UpperPolicy:
 
         W = torch.zeros(S.shape[0], self.a.shape[1], dtype = torch_type)
         mus = self.mean(S)
+        
+        if not self.torchOut:
+              mus = torch.from_numpy(mus)
+              
         for sample in range(S.shape[0]):
             self.mvnrnd.loc = mus[sample, :]
             W[sample, :] = self.mvnrnd.sample()
