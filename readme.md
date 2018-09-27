@@ -96,9 +96,9 @@ For a full example of how you could use CREPS for your own Reinforcement Learnin
 $ python customEnv/robot_learn.py
 ```
 
-Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. [/GPREPS_cartPole](/GPREPS_cartPole) offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment. To run it use
+Furthermore, CREPS can be easily extended to a more data-efficient model-based approach. [/cartPole_GPREPS](/cartPole_GPREPS) offers a quick example of this approach, using Gaussian Processes to learn the forward dynamics of the environment. To run it use
 ```
-$ python GPREPS_cartPole/cartPole_learn.py
+$ python cartPole_GPREPS/cartPole_learn.py
 ```
 
 
