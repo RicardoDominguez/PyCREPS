@@ -1,6 +1,7 @@
-"""PyTorch implementation of:
-        -The CREPS optimizer
-        -A linear-Gaussian upper-level policy
+"""PyTorch implementation of the CREPS optimizer and upper-level policy.
+
+The numpy implementation will generally be faster for relatively small problems.
+Check that your application is sufficiently involved to benefit computationally.
 """
 
 import numpy as np
@@ -59,7 +60,7 @@ def computeSampleWeighting(R, F, eps):
         log_sum_exp = R_over_eta_max + torch.log(Z_sum / F.shape[0])
 
         f = eta * (eps + log_sum_exp) + F_mean.mm(theta)
-        
+
         d_eta = eps + log_sum_exp - Z.t().mm(R_over_eta)/Z_sum
         d_theta = F_mean - (Z.t().mm(F) / Z_sum)
         return f.numpy(), np.append(d_eta.numpy(), d_theta.numpy())
@@ -174,10 +175,10 @@ class UpperPolicy:
 
         W = torch.zeros(S.shape[0], self.a.shape[1], dtype = torch_type)
         mus = self.mean(S)
-        
+
         if not self.torchOut:
               mus = torch.from_numpy(mus)
-              
+
         for sample in range(S.shape[0]):
             self.mvnrnd.loc = mus[sample, :]
             W[sample, :] = self.mvnrnd.sample()

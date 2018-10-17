@@ -1,6 +1,7 @@
-"""Numpy implementation of:
-        -The CREPS optimizer
-        -A linear-Gaussian upper-level policy
+"""Theano implementation of the CREPS optimizer and upper-level policy.
+
+The numpy implementation will generally be faster for relatively small problems.
+Check that your application is sufficiently involved to benefit computationally.
 """
 
 import numpy as np
@@ -11,10 +12,10 @@ import theano.tensor as T
 
 class dualFunction:
     """Used to compute dual function and its derivative.
-    
+
     Using this class allows to set shared theano variables, improving run time
     performance.
-    
+
     Theano functions:
         self.sample_f: evaluate dual function at x and its gradient
         self.sample_weights: evaluate weights for weighted ML update
@@ -23,22 +24,22 @@ class dualFunction:
     def __init__(self):
         self.initRFeps = False
         self.initGauss = False
-    
+
     def updateSharedVarRFeps(self, R, F, eps):
         """Update the shared variables R, F and eps.
-        
+
         If the variables have not been initialised (self.initRFeps), the shared
         variables R, F and eps and the variable x are also initialized.
-        
+
         Parameters
         ----------
-    
+
         R: numpy.ndarray, shape (n_samples, 1)
             Rewards
-    
+
         F: numpy.ndarray, shape (n_samples, n_context_features)
             Context features
-    
+
         eps: float
             Epsilon
         """
@@ -53,13 +54,13 @@ class dualFunction:
             self.eps = theano.shared(eps)
             self.setLossGrad()
             self.initRFeps = True
-            
+
     def updateSharedGauss(self, a, A):
         """Update the shared variables a, A and S.
-        
+
         If the variables have not been initialised (self.initGauss), the shared
         variables R, F and eps and the variable x are also initialized.
-        
+
         Parameters
         ----------
 
@@ -81,25 +82,25 @@ class dualFunction:
             self.A = theano.shared(A)
             self.setGauss()
             self.initGauss = True
-     
+
     def setGauss(self):
         """Set the theano function to compute the mean for Gaussian sampling.
-        
+
         This function only needs to be called once (not every policy update).
-        
+
         The theano variables self.a and self.A must be defined previous
         to this function call.
         """
         S = T.dmatrix('S')
         mu = self.a + S.dot(self.A)
         self.gaussMean = theano.function([S], mu)
-        
+
     def setLossGrad(self):
         """Set the theano function to compute dual functions and Gauss update.
-        
+
         This function only needs to be called once (not every policy update).
-        
-        The theano variables self.x, self.F, self.R, self.eps, self.a and 
+
+        The theano variables self.x, self.F, self.R, self.eps, self.a and
         self.A must be defined previous to this function call.
         """
         # ---------------------------------------------------------------------
@@ -107,38 +108,38 @@ class dualFunction:
         # ---------------------------------------------------------------------
         eta = self.x[0]
         theta = self.x[1:].reshape((-1, 1))
-    
+
         F_mean = self.F.mean(0).reshape((1, -1))
         R_over_eta = (self.R - self.F.dot(theta)) / eta
         R_over_eta_max = R_over_eta.max()
         Z = T.exp(R_over_eta - R_over_eta_max).T
         Z_sum = Z.sum()
         log_sum_exp = R_over_eta_max + T.log(Z_sum / self.F.shape[0])
-    
+
         # f wrapped in mean to prevent "cost must be a scalar" error
         f = T.mean(eta * (self.eps + log_sum_exp) + F_mean.dot(theta))
         d_x = T.grad(f, self.x)
         self.sample_f = theano.function([self.x], [f, d_x])
-        
+
         # ---------------------------------------------------------------------
         # Sample weights for weighted ML update.
         # ---------------------------------------------------------------------
         p = Z / Z_sum
         self.sample_weights = theano.function([self.x], p)
-        
+
         # ---------------------------------------------------------------------
         # Upper level policy update.
         # ---------------------------------------------------------------------
         S = T.dmatrix('S')
         W = T.dmatrix('W')
         p_ = T.dvector('p_')
-        
+
         # Compute means
         P = T.basic.diag(p_)
         bigA = T.nlinalg.pinv(S.T.dot(P).dot(S)).dot(S.T).dot(P).dot(W)
         a = bigA[0, :]
         A = bigA[1:, :]
-    
+
         # Compute new covariance matrix
         wd = W - a
         sigma = (p_ * wd.T).dot(wd)
@@ -173,10 +174,10 @@ def computeSampleWeighting(R, F, eps):
     assert(R.shape[1] == 1 and
            R.shape[0] == F.shape[0]
            ), "Incorrect parameter size"
-    
+
     # Update theano shared variables
     t_dualFnc.updateSharedVarRFeps(R, F, eps)
-    
+
     # Initial point
     x0 = [1] + [1] * F.shape[1]
 

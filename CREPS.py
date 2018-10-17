@@ -1,6 +1,7 @@
-"""Numpy implementation of:
-        -The CREPS optimizer
-        -A linear-Gaussian upper-level policy
+"""Numpy implementation of the CREPS optimizer and upper-level policy.
+
+This implementation will generally be faster for relatively small problems
+comapred to the Theano and Torch implementations.
 """
 
 import numpy as np
